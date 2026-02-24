@@ -1,24 +1,26 @@
 {
   "rewrites": [
-    {
-      "source": "/",
-      "destination": "/pages/login.html"
-    },
-    {
-      "source": "/login",
-      "destination": "/pages/login.html"
-    },
-    {
-      "source": "/admin",
-      "destination": "/pages/admin.html"
-    },
-    {
-      "source": "/dashboard",
-      "destination": "/pages/dashboard.html"
-    },
-    {
-      "source": "/settings",
-      "destination": "/pages/settings.html"
-    }
+    { "source": "/", "destination": "/pages/login.html" },
+    { "source": "/login", "destination": "/pages/login.html" },
+    { "source": "/admin", "destination": "/pages/admin.html" },
+    { "source": "/dashboard", "destination": "/pages/dashboard.html" },
+    { "source": "/settings", "destination": "/pages/settings.html" },
+    { "source": "/user-dashboard", "destination": "/pages/user-dashboard.html" },
+    { "source": "/user-login", "destination": "/pages/user-login.html" },
+    { "source": "/user-products", "destination": "/pages/user-products.html" },
+    { "source": "/user-stock-in", "destination": "/pages/user-stock-in.html" },
+    { "source": "/user-stock-out", "destination": "/pages/user-stock-out.html" },
+    { "source": "/products", "destination": "/pages/products.html" },
+    { "source": "/suppliers", "destination": "/pages/suppliers.html" },
+    { "source": "/warehouses", "destination": "/pages/warehouses.html" },
+    { "source": "/users", "destination": "/pages/users.html" },
+    { "source": "/reports", "destination": "/pages/reports.html" },
+    { "source": "/stock-in", "destination": "/pages/stock-in.html" },
+    { "source": "/stock-out", "destination": "/pages/stock-out.html" },
+    { "source": "/manage-users", "destination": "/pages/manage-users.html" },
+    { "source": "/warehouse-list", "destination": "/pages/warehouse-list.html" },
+    { "source": "/warehouse-products", "destination": "/pages/warehouse-products.html" },
+    { "source": "/warehouse-transfer", "destination": "/pages/warehouse-transfer.html" },
+    { "source": "/pages/:path*", "destination": "/pages/:path*" }
   ]
 }
