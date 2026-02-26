@@ -196,7 +196,12 @@ async function loadWarehouses() {
         if (warehouses.length === 0) {
           checklist.innerHTML = '<div class="text-muted small">No warehouses available.</div>';
         } else {
-          checklist.innerHTML = warehouses.map(wh => `
+          checklist.innerHTML = `
+            <div class="form-check mb-1 pb-1 border-bottom">
+              <input class="form-check-input" type="checkbox" id="mwh_select_all">
+              <label class="form-check-label fw-semibold" for="mwh_select_all">Select All</label>
+            </div>
+          ` + warehouses.map(wh => `
             <div class="form-check mb-1">
               <input class="form-check-input wh-manager-cb" type="checkbox"
                 id="mwh_${wh._id}" value="${wh._id}">
@@ -206,6 +211,25 @@ async function loadWarehouses() {
               </label>
             </div>
           `).join('');
+
+          // Bind Select All
+          const selectAllCb = checklist.querySelector('#mwh_select_all');
+          if (selectAllCb) {
+            selectAllCb.addEventListener('change', function () {
+              checklist.querySelectorAll('.wh-manager-cb').forEach(cb => {
+                cb.checked = this.checked;
+              });
+            });
+            checklist.querySelectorAll('.wh-manager-cb').forEach(cb => {
+              cb.addEventListener('change', function () {
+                const allCbs = checklist.querySelectorAll('.wh-manager-cb');
+                const allChecked = Array.from(allCbs).every(c => c.checked);
+                const noneChecked = Array.from(allCbs).every(c => !c.checked);
+                selectAllCb.checked = allChecked;
+                selectAllCb.indeterminate = !allChecked && !noneChecked;
+              });
+            });
+          }
         }
       }
 

@@ -269,7 +269,18 @@ async function loadWarehouses() {
       return;
     }
 
-    list.innerHTML = warehouses.map(wh => `
+    list.innerHTML = `
+      <div class="d-flex align-items-center gap-2 mb-1 pb-1 border-bottom">
+        <div class="form-check mb-0 flex-grow-1" style="min-width: 0;">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="wh_check_all"
+          >
+          <label class="form-check-label fw-semibold" for="wh_check_all">Select All</label>
+        </div>
+      </div>
+    ` + warehouses.map(wh => `
       <div class="d-flex align-items-center gap-2 mb-2 warehouse-row" data-id="${wh._id}">
         <div class="form-check mb-0 flex-grow-1" style="min-width: 0;">
           <input
@@ -297,6 +308,22 @@ async function loadWarehouses() {
       </div>
     `).join('');
 
+    // Bind Select All checkbox
+    const selectAllCb = list.querySelector('#wh_check_all');
+    if (selectAllCb) {
+      selectAllCb.addEventListener('change', function () {
+        list.querySelectorAll('.wh-checkbox').forEach(cb => {
+          cb.checked = this.checked;
+          const qtyInput = document.getElementById('wh_qty_' + cb.value);
+          if (qtyInput) {
+            qtyInput.disabled = !this.checked;
+            if (!this.checked) qtyInput.value = '0';
+          }
+        });
+        validateWarehouseQty();
+      });
+    }
+
     // Bind checkbox → enable/disable qty input
     list.querySelectorAll('.wh-checkbox').forEach(cb => {
       cb.addEventListener('change', function () {
@@ -308,6 +335,14 @@ async function loadWarehouses() {
         } else {
           qtyInput.disabled = true;
           qtyInput.value = '0';
+        }
+        // Update Select All state
+        const allCbs = list.querySelectorAll('.wh-checkbox');
+        const allChecked = Array.from(allCbs).every(c => c.checked);
+        const noneChecked = Array.from(allCbs).every(c => !c.checked);
+        if (selectAllCb) {
+          selectAllCb.checked = allChecked;
+          selectAllCb.indeterminate = !allChecked && !noneChecked;
         }
         validateWarehouseQty();
       });
