@@ -380,7 +380,8 @@ async function showEditModal(userId) {
     document.getElementById('editName').value = user.name;
     document.getElementById('editEmail').value = user.email;
     document.getElementById('editRole').value = user.role;
-    document.getElementById('editIsActive').value = user.isActive.toString();
+    // Convert status to isActive format for the form (active = true, inactive = false)
+    document.getElementById('editIsActive').value = (user.status === 'active').toString();
 
     // Show modal
     const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
@@ -402,7 +403,7 @@ async function handleEditUser(e) {
     name: formData.get('name'),
     email: formData.get('email'),
     role: formData.get('role'),
-    isActive: formData.get('isActive') === 'true'
+    status: formData.get('isActive') === 'true' ? 'active' : 'inactive'
   };
 
   try {
