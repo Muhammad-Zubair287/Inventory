@@ -241,14 +241,14 @@
 
     <!-- Edit User Modal -->
     <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
-      <div class="modal-dialog">
+      <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="editUserModalLabel">Edit User</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-          <form id="editUserForm">
-            <div class="modal-body">
+          <form id="editUserForm" style="display:flex; flex-direction:column; flex:1 1 auto; overflow:hidden; min-height:0;">
+            <div class="modal-body" style="overflow-y:auto;">
               <div class="mb-3">
                 <label for="editName" class="form-label">Full Name *</label>
                 <input type="text" class="form-control" id="editName" name="name" required>
@@ -273,6 +273,29 @@
                   </small>
                 </div>
               </div>
+
+              <!-- Single warehouse — shown for Staff / Viewer -->
+              <div class="mb-3" id="editSingleWarehouseSection">
+                <label for="editWarehouse" class="form-label">Assigned Warehouse *</label>
+                <select class="form-select" id="editWarehouse" name="warehouse">
+                  <option value="">Select Warehouse</option>
+                </select>
+              </div>
+
+              <!-- Multi-warehouse — shown for Manager -->
+              <div class="mb-3" id="editMultiWarehouseSection" style="display:none;">
+                <label class="form-label fw-semibold">
+                  Assigned Warehouses *
+                  <span class="text-muted fw-normal small">(select one or more)</span>
+                </label>
+                <div id="editWarehouseChecklist" class="border rounded p-3 bg-light" style="max-height:200px;overflow-y:auto;">
+                  <div class="text-muted small">Loading warehouses…</div>
+                </div>
+                <div id="editWarehouseError" class="text-danger small mt-1" style="display:none;">
+                  Please select at least one warehouse.
+                </div>
+              </div>
+
               <div class="mb-3">
                 <label for="editIsActive" class="form-label">Status *</label>
                 <select class="form-select" id="editIsActive" name="isActive" required>

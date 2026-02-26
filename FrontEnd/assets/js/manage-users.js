@@ -43,6 +43,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     addRoleSelect.addEventListener('change', handleRoleChange);
   }
 
+  // Edit role change → toggle warehouse section
+  const editRoleSelect = document.getElementById('editRole');
+  if (editRoleSelect) {
+    editRoleSelect.addEventListener('change', () => handleEditRoleChange());
+  }
+
   // Reset warehouse section when modal closes
   const addModalEl = document.getElementById('addUserModal');
   if (addModalEl) {
@@ -265,6 +271,132 @@ function handleRoleChange() {
   }
 }
 
+// Load warehouses for edit modal
+async function loadWarehousesForEdit() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/warehouses`, {
+      headers: getHeaders()
+    });
+
+    const data = await response.json();
+
+    if (data.success && data.data && data.data.warehouses) {
+      const warehouses = data.data.warehouses;
+
+      // Single-select dropdown (Staff / Viewer)
+      const warehouseSelect = document.getElementById('editWarehouse');
+      if (warehouseSelect) {
+        warehouseSelect.innerHTML = warehouses.length === 0
+          ? '<option value="">No warehouses available</option>'
+          : '<option value="">Select Warehouse</option>' +
+            warehouses.map(wh =>
+              `<option value="${wh._id}">${wh.code} - ${wh.name}</option>`
+            ).join('');
+      }
+
+      // Checklist (Manager)
+      const checklist = document.getElementById('editWarehouseChecklist');
+      if (checklist) {
+        if (warehouses.length === 0) {
+          checklist.innerHTML = '<div class="text-muted small">No warehouses available.</div>';
+        } else {
+          checklist.innerHTML = `
+            <div class="form-check mb-1 pb-1 border-bottom">
+              <input class="form-check-input" type="checkbox" id="edit_mwh_select_all">
+              <label class="form-check-label fw-semibold" for="edit_mwh_select_all">Select All</label>
+            </div>
+          ` + warehouses.map(wh => `
+            <div class="form-check mb-1">
+              <input class="form-check-input wh-edit-manager-cb" type="checkbox"
+                id="edit_mwh_${wh._id}" value="${wh._id}">
+              <label class="form-check-label" for="edit_mwh_${wh._id}">
+                <span class="fw-semibold">${wh.code}</span>
+                <span class="text-muted"> — ${wh.name}</span>
+              </label>
+            </div>
+          `).join('');
+
+          // Bind Select All
+          const selectAllCb = checklist.querySelector('#edit_mwh_select_all');
+          if (selectAllCb) {
+            selectAllCb.addEventListener('change', function () {
+              checklist.querySelectorAll('.wh-edit-manager-cb').forEach(cb => {
+                cb.checked = this.checked;
+              });
+            });
+            checklist.querySelectorAll('.wh-edit-manager-cb').forEach(cb => {
+              cb.addEventListener('change', function () {
+                const allCbs = checklist.querySelectorAll('.wh-edit-manager-cb');
+                const allChecked = Array.from(allCbs).every(c => c.checked);
+                const noneChecked = Array.from(allCbs).every(c => !c.checked);
+                selectAllCb.checked = allChecked;
+                selectAllCb.indeterminate = !allChecked && !noneChecked;
+              });
+            });
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error loading warehouses for edit:', error);
+    showAlert('Failed to load warehouses. Please try again.', 'danger');
+  }
+}
+
+// Toggle warehouse section based on selected role in edit modal
+function handleEditRoleChange(user = null) {
+  const role = document.getElementById('editRole')?.value;
+  const singleSection = document.getElementById('editSingleWarehouseSection');
+  const multiSection = document.getElementById('editMultiWarehouseSection');
+  const singleSelect = document.getElementById('editWarehouse');
+
+  if (role === 'admin') {
+    // Hide both sections for admin
+    if (singleSection) singleSection.style.display = 'none';
+    if (multiSection) multiSection.style.display = 'none';
+    if (singleSelect) singleSelect.removeAttribute('required');
+  } else if (role === 'manager') {
+    // Show multi-select for manager
+    if (singleSection) singleSection.style.display = 'none';
+    if (multiSection) multiSection.style.display = 'block';
+    if (singleSelect) singleSelect.removeAttribute('required');
+
+    // Pre-select user's current warehouses if provided
+    if (user && user.warehouses) {
+      const warehouseIds = user.warehouses.map(wh => wh._id || wh);
+      document.querySelectorAll('#editWarehouseChecklist .wh-edit-manager-cb').forEach(cb => {
+        cb.checked = warehouseIds.includes(cb.value);
+      });
+      // Update select all checkbox
+      const selectAllCb = document.querySelector('#edit_mwh_select_all');
+      if (selectAllCb) {
+        const allCbs = document.querySelectorAll('#editWarehouseChecklist .wh-edit-manager-cb');
+        const allChecked = Array.from(allCbs).every(c => c.checked);
+        selectAllCb.checked = allChecked;
+        selectAllCb.indeterminate = !allChecked && allCbs.length > 0 && Array.from(allCbs).some(c => c.checked);
+      }
+    }
+  } else {
+    // Show single-select for staff/viewer
+    if (singleSection) singleSection.style.display = 'block';
+    if (multiSection) multiSection.style.display = 'none';
+    if (singleSelect) singleSelect.setAttribute('required', 'required');
+
+    // Pre-select user's current warehouse if provided
+    if (user && user.warehouse) {
+      const warehouseId = user.warehouse._id || user.warehouse;
+      if (singleSelect) singleSelect.value = warehouseId;
+    }
+
+    // Uncheck all manager checkboxes
+    document.querySelectorAll('#editWarehouseChecklist .wh-edit-manager-cb').forEach(cb => {
+      cb.checked = false;
+    });
+    const errEl = document.getElementById('editWarehouseError');
+    if (errEl) errEl.style.display = 'none';
+  }
+}
+
 // Show add user modal
 function showAddUserModal() {
   const modal = new bootstrap.Modal(document.getElementById('addUserModal'));
@@ -376,12 +508,18 @@ async function showEditModal(userId) {
     const data = await response.json();
     const user = data.data.user;
 
+    // Load warehouses for edit modal
+    await loadWarehousesForEdit();
+
     // Populate form
     document.getElementById('editName').value = user.name;
     document.getElementById('editEmail').value = user.email;
     document.getElementById('editRole').value = user.role;
     // Convert status to isActive format for the form (active = true, inactive = false)
     document.getElementById('editIsActive').value = (user.status === 'active').toString();
+
+    // Handle warehouse selections based on role
+    handleEditRoleChange(user);
 
     // Show modal
     const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
@@ -399,12 +537,41 @@ async function handleEditUser(e) {
   if (!currentEditId) return;
 
   const formData = new FormData(editUserForm);
+  const role = formData.get('role');
   const userData = {
     name: formData.get('name'),
     email: formData.get('email'),
-    role: formData.get('role'),
+    role: role,
     status: formData.get('isActive') === 'true' ? 'active' : 'inactive'
   };
+
+  // Handle warehouse assignment based on role
+  if (role === 'manager') {
+    // Collect all checked warehouses
+    const checkedWarehouses = [];
+    document.querySelectorAll('#editWarehouseChecklist .wh-edit-manager-cb:checked').forEach(cb => {
+      checkedWarehouses.push(cb.value);
+    });
+
+    if (checkedWarehouses.length === 0) {
+      const errEl = document.getElementById('editWarehouseError');
+      if (errEl) errEl.style.display = 'block';
+      showAlert('Please select at least one warehouse for the manager.', 'danger');
+      return;
+    }
+
+    const errEl = document.getElementById('editWarehouseError');
+    if (errEl) errEl.style.display = 'none';
+    userData.warehouses = checkedWarehouses;
+  } else if (role !== 'admin') {
+    // Single warehouse for staff / viewer
+    const warehouse = formData.get('warehouse');
+    if (!warehouse || warehouse === '') {
+      showAlert('Please select a warehouse', 'danger');
+      return;
+    }
+    userData.warehouse = warehouse.trim();
+  }
 
   try {
     const response = await fetch(`${API_BASE_URL}/users/${currentEditId}`, {
