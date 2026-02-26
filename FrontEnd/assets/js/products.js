@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadProducts();
   loadCategories();
   loadSuppliers();
-  loadWarehouses(); // Load warehouses for product assignment
+  loadWarehouses(); // Load warehouses as checkbox list
 
   // Event listeners
   if (addProductForm) {
@@ -43,6 +43,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   if (searchInput) {
     searchInput.addEventListener('input', debounce(loadProducts, 500));
+  }
+
+  // Re-validate warehouse totals whenever the product quantity field changes
+  const qtyInput = document.getElementById('productQuantity');
+  if (qtyInput) {
+    qtyInput.addEventListener('input', validateWarehouseQty);
+  }
+
+  // Reset warehouse checklist when the Add Product modal is closed
+  const addModal = document.getElementById('addProductModal');
+  if (addModal) {
+    addModal.addEventListener('hidden.bs.modal', () => {
+      document.querySelectorAll('#warehouseStockList .wh-checkbox').forEach(cb => {
+        cb.checked = false;
+      });
+      document.querySelectorAll('#warehouseStockList .wh-qty-input').forEach(inp => {
+        inp.value = '0';
+        inp.disabled = true;
+      });
+      const errorEl = document.getElementById('warehouseQtyError');
+      if (errorEl) errorEl.style.display = 'none';
+    });
   }
 
   // Logout functionality
@@ -216,58 +238,117 @@ async function loadSuppliers() {
   }
 }
 
-// Load warehouses for dropdown
+// Load warehouses and render the multi-select checkbox list
 async function loadWarehouses() {
+  const list = document.getElementById('warehouseStockList');
+  if (!list) return;
+
   try {
-    console.log('🏢 [Products] Loading warehouses...');
     const response = await fetch(`${API_BASE_URL}/warehouses`, {
       headers: getHeaders()
     });
 
-    console.log('🏢 [Products] Warehouses response status:', response.status);
     const data = await response.json();
-    console.log('🏢 [Products] Warehouses response data:', data);
-    
+
     // Check for session expiry
-    if (window.handleApiError && window.handleApiError(response, data)) {
-      return;
-    }
+    if (window.handleApiError && window.handleApiError(response, data)) return;
 
     if (!response.ok) {
-      console.error('❌ [Products] Failed to load warehouses:', data);
+      list.innerHTML = '<div class="text-muted small text-danger">Could not load warehouses.</div>';
       return;
     }
 
-    // The API returns warehouses in data.data.warehouses
     const warehouses = data.data?.warehouses || [];
     console.log(`🏢 [Products] Found ${warehouses.length} warehouses`);
-    
-    const warehouseSelect = document.getElementById('productWarehouse');
-    
-    if (warehouseSelect) {
-      warehouseSelect.innerHTML = '<option value="">No warehouse (optional)</option>';
-      
-      if (warehouses.length > 0) {
-        warehouseSelect.innerHTML += warehouses.map(wh => 
-          `<option value="${wh._id}">${wh.code} - ${wh.name}</option>`
-        ).join('');
-        console.log(`✅ [Products] Added ${warehouses.length} warehouses to dropdown`);
-      }
-      
-      // Add event listener to show/hide warehouse quantity field
-      warehouseSelect.addEventListener('change', function() {
-        const warehouseQtySection = document.getElementById('warehouseQuantitySection');
-        if (this.value) {
-          warehouseQtySection.style.display = 'block';
-        } else {
-          warehouseQtySection.style.display = 'none';
-          document.getElementById('warehouseQuantity').value = '0';
-        }
-      });
+
+    if (warehouses.length === 0) {
+      list.innerHTML = '<div class="text-muted small">No warehouses available.</div>';
+      return;
     }
+
+    list.innerHTML = warehouses.map(wh => `
+      <div class="d-flex align-items-center gap-2 mb-2 warehouse-row" data-id="${wh._id}">
+        <div class="form-check mb-0 flex-grow-1" style="min-width: 0;">
+          <input
+            class="form-check-input wh-checkbox"
+            type="checkbox"
+            id="wh_check_${wh._id}"
+            value="${wh._id}"
+          >
+          <label class="form-check-label text-truncate w-100" for="wh_check_${wh._id}" title="${wh.code} — ${wh.name}">
+            <span class="fw-semibold">${wh.code}</span>
+            <span class="text-muted">— ${wh.name}</span>
+          </label>
+        </div>
+        <input
+          type="number"
+          class="form-control form-control-sm wh-qty-input"
+          id="wh_qty_${wh._id}"
+          placeholder="Qty"
+          min="0"
+          value="0"
+          style="width: 90px; flex-shrink: 0;"
+          disabled
+          aria-label="Quantity for ${wh.name}"
+        >
+      </div>
+    `).join('');
+
+    // Bind checkbox → enable/disable qty input
+    list.querySelectorAll('.wh-checkbox').forEach(cb => {
+      cb.addEventListener('change', function () {
+        const qtyInput = document.getElementById('wh_qty_' + this.value);
+        if (this.checked) {
+          qtyInput.disabled = false;
+          qtyInput.focus();
+          qtyInput.select();
+        } else {
+          qtyInput.disabled = true;
+          qtyInput.value = '0';
+        }
+        validateWarehouseQty();
+      });
+    });
+
+    // Revalidate whenever a qty changes
+    list.querySelectorAll('.wh-qty-input').forEach(inp => {
+      inp.addEventListener('input', validateWarehouseQty);
+    });
+
+    console.log(`✅ [Products] Rendered ${warehouses.length} warehouses as checkbox list`);
   } catch (error) {
     console.error('❌ [Products] Error loading warehouses:', error);
+    if (list) {
+      list.innerHTML = '<div class="text-muted small text-danger">Failed to load warehouses.</div>';
+    }
   }
+}
+
+/**
+ * Validate that the sum of all selected warehouse quantities
+ * does not exceed the total product quantity.
+ * @returns {boolean} true when valid
+ */
+function validateWarehouseQty() {
+  const totalQty = parseInt(document.getElementById('productQuantity')?.value) || 0;
+  let totalWHQty = 0;
+
+  document.querySelectorAll('#warehouseStockList .wh-checkbox:checked').forEach(cb => {
+    totalWHQty += parseInt(document.getElementById('wh_qty_' + cb.value)?.value) || 0;
+  });
+
+  const errorEl = document.getElementById('warehouseQtyError');
+  if (!errorEl) return true;
+
+  if (totalWHQty > totalQty) {
+    errorEl.textContent =
+      `Assigned warehouse quantity (${totalWHQty}) exceeds total product quantity (${totalQty}).`;
+    errorEl.style.display = 'block';
+    return false;
+  }
+
+  errorEl.style.display = 'none';
+  return true;
 }
 
 // Handle add product
@@ -276,14 +357,12 @@ async function handleAddProduct(e) {
 
   const formData = new FormData(addProductForm);
   const supplierValue = formData.get('supplier');
-  const warehouseValue = formData.get('warehouse');
-  const warehouseQuantityValue = formData.get('warehouseQuantity');
   const priceValue = formData.get('price');
   const quantityValue = formData.get('quantity');
   const minStockValue = formData.get('minStock');
-  
+
   const productData = {
-    sku: formData.get('sku')?.trim().toUpperCase(),  // Auto-convert to uppercase
+    sku: formData.get('sku')?.trim().toUpperCase(),
     name: formData.get('name')?.trim(),
     description: formData.get('description')?.trim() || '',
     category: formData.get('category'),
@@ -292,25 +371,41 @@ async function handleAddProduct(e) {
     minStockLevel: minStockValue ? parseInt(minStockValue) : 10,
     status: 'available'
   };
-  
+
   // Only add supplier if one is selected
   if (supplierValue && supplierValue.trim() !== '') {
     productData.supplier = supplierValue.trim();
   }
 
-  // Add warehouse assignment if selected
-  if (warehouseValue && warehouseValue.trim() !== '') {
-    const warehouseQty = warehouseQuantityValue ? parseInt(warehouseQuantityValue) : 0;
-    productData.warehouseStock = [{
-      warehouse: warehouseValue.trim(),
-      quantity: warehouseQty,
+  // Collect all checked warehouses with their quantities
+  const selectedWarehouses = [];
+  document.querySelectorAll('#warehouseStockList .wh-checkbox:checked').forEach(cb => {
+    const qty = parseInt(document.getElementById('wh_qty_' + cb.value)?.value) || 0;
+    selectedWarehouses.push({
+      warehouse: cb.value,
+      quantity: qty,
       minStockLevel: minStockValue ? parseInt(minStockValue) : 10
-    }];
+    });
+  });
+
+  // Frontend validation: total warehouse qty must not exceed product quantity
+  if (selectedWarehouses.length > 0) {
+    const totalWHQty = selectedWarehouses.reduce((sum, ws) => sum + ws.quantity, 0);
+    if (totalWHQty > productData.quantity) {
+      showAlert(
+        `Assigned warehouse quantity (${totalWHQty}) exceeds total product quantity (${productData.quantity}).`,
+        'danger'
+      );
+      // Make sure the error indicator is visible too
+      validateWarehouseQty();
+      return;
+    }
+    productData.warehouseStock = selectedWarehouses;
   }
 
   try {
     console.log('Sending product data:', productData);
-    
+
     const response = await fetch(`${API_BASE_URL}/products`, {
       method: 'POST',
       headers: getHeaders(),
@@ -323,7 +418,7 @@ async function handleAddProduct(e) {
     if (!response.ok) {
       // Show detailed validation errors if available
       let errorMessage = data.message || 'Failed to add product';
-      
+
       // Handle validation errors array
       if (data.errors && Array.isArray(data.errors)) {
         errorMessage = data.errors.map(err => {
@@ -333,7 +428,7 @@ async function handleAddProduct(e) {
           return JSON.stringify(err);
         }).join(', ');
       }
-      
+
       console.error('Validation failed:', errorMessage);
       console.error('Full error response:', data);
       throw new Error(errorMessage);
@@ -341,18 +436,29 @@ async function handleAddProduct(e) {
 
     showAlert('Product added successfully!', 'success');
     addProductForm.reset();
-    
+
+    // Reset warehouse checklist UI
+    document.querySelectorAll('#warehouseStockList .wh-checkbox').forEach(cb => {
+      cb.checked = false;
+    });
+    document.querySelectorAll('#warehouseStockList .wh-qty-input').forEach(inp => {
+      inp.value = '0';
+      inp.disabled = true;
+    });
+    const errorEl = document.getElementById('warehouseQtyError');
+    if (errorEl) errorEl.style.display = 'none';
+
     // Close modal
     const modalElement = document.getElementById('addProductModal');
     const modal = bootstrap.Modal.getInstance(modalElement);
     if (modal) modal.hide();
-    
+
     // Reload products to show new product
     loadProducts();
   } catch (error) {
     console.error('Error adding product:', error);
     console.error('Product data sent:', productData);
-    
+
     // Better error message handling
     let displayMessage = 'Failed to add product';
     if (error.message && error.message !== '[object Object]') {
@@ -360,7 +466,7 @@ async function handleAddProduct(e) {
     } else if (typeof error === 'string') {
       displayMessage = error;
     }
-    
+
     showAlert(displayMessage, 'danger');
   }
 }

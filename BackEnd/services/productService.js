@@ -20,6 +20,21 @@ class ProductService {
         throw new ApiError(HTTP_STATUS.CONFLICT, 'Product with this SKU already exists');
       }
 
+      // Validate that total warehouse quantities do not exceed product quantity
+      if (productData.warehouseStock && productData.warehouseStock.length > 0) {
+        const totalWarehouseQty = productData.warehouseStock.reduce(
+          (sum, ws) => sum + (ws.quantity || 0),
+          0
+        );
+        const productQty = productData.quantity || 0;
+        if (totalWarehouseQty > productQty) {
+          throw new ApiError(
+            HTTP_STATUS.BAD_REQUEST,
+            `Assigned warehouse quantity (${totalWarehouseQty}) exceeds total product quantity (${productQty}).`
+          );
+        }
+      }
+
       const product = await Product.create(productData);
       logger.info(`Product created: ${product._id}`);
       return product;
@@ -134,6 +149,24 @@ class ProductService {
 
         if (existingProduct) {
           throw new ApiError(HTTP_STATUS.CONFLICT, 'Product with this SKU already exists');
+        }
+      }
+
+      // Validate warehouse quantity against total quantity when both are provided
+      if (
+        updateData.warehouseStock &&
+        updateData.warehouseStock.length > 0 &&
+        updateData.quantity !== undefined
+      ) {
+        const totalWarehouseQty = updateData.warehouseStock.reduce(
+          (sum, ws) => sum + (ws.quantity || 0),
+          0
+        );
+        if (totalWarehouseQty > updateData.quantity) {
+          throw new ApiError(
+            HTTP_STATUS.BAD_REQUEST,
+            `Assigned warehouse quantity (${totalWarehouseQty}) exceeds total product quantity (${updateData.quantity}).`
+          );
         }
       }
 

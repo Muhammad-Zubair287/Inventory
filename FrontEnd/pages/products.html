@@ -147,7 +147,7 @@
 
     <!-- Add Product Modal -->
     <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
-      <div class="modal-dialog">
+      <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="addProductModalLabel">Add New Product</h5>
@@ -202,21 +202,22 @@
                   <!-- Suppliers will be loaded dynamically -->
                 </select>
               </div>
-              <div class="mb-3">
-                <label for="productWarehouse" class="form-label">Assign to Warehouse</label>
-                <select class="form-select" id="productWarehouse" name="warehouse">
-                  <option value="">No warehouse (optional)</option>
-                  <!-- Warehouses will be loaded dynamically -->
-                </select>
-                <div class="form-text">
-                  <small>Optionally assign this product to a specific warehouse. The product will appear in that warehouse's inventory.</small>
+
+              <!-- Multi-warehouse assignment -->
+              <div class="mb-1">
+                <label class="form-label mb-1 fw-semibold">
+                  Assign to Warehouses
+                  <span class="text-muted fw-normal small">(optional)</span>
+                </label>
+                <div id="warehouseStockList" class="border rounded p-3 bg-light" style="max-height: 210px; overflow-y: auto;">
+                  <div class="text-muted small d-flex align-items-center gap-2">
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                    Loading warehouses…
+                  </div>
                 </div>
-              </div>
-              <div class="mb-3" id="warehouseQuantitySection" style="display: none;">
-                <label for="warehouseQuantity" class="form-label">Warehouse Stock Quantity</label>
-                <input type="number" class="form-control" id="warehouseQuantity" name="warehouseQuantity" placeholder="0" min="0" value="0">
-                <div class="form-text">
-                  <small>Quantity to add to the selected warehouse</small>
+                <div id="warehouseQtyError" class="text-danger small mt-1" style="display:none;"></div>
+                <div class="form-text mt-1">
+                  <i class="bi bi-info-circle me-1"></i>Check a warehouse to allocate stock. Total allocated cannot exceed the product quantity.
                 </div>
               </div>
             </form>
