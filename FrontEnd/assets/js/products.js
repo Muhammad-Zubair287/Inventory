@@ -163,10 +163,13 @@ function displayProducts(products) {
       </td>
       <td>${product.supplier?.name || 'N/A'}</td>
       <td class="text-nowrap">
-        <button class="btn btn-sm btn-outline-primary me-2" onclick="showEditModal('${product._id}')">
+        <button class="btn btn-sm btn-outline-info me-1" onclick="showDetailModal('${product._id}')" title="View Details">
+          <i class="bi bi-eye"></i> Detail
+        </button>
+        <button class="btn btn-sm btn-outline-primary me-1" onclick="showEditModal('${product._id}')" title="Edit Product">
           <i class="bi bi-pencil-square"></i> Edit
         </button>
-        <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${product._id}')">
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${product._id}')" title="Delete Product">
           <i class="bi bi-trash"></i> Delete
         </button>
       </td>
@@ -603,8 +606,141 @@ function showAlert(message, type = 'info') {
   }, 5000);
 }
 
+// Show product detail modal
+async function showDetailModal(productId) {
+  const modalEl = document.getElementById('productDetailModal');
+  const body = document.getElementById('productDetailBody');
+
+  // Show spinner
+  body.innerHTML = `
+    <div class="text-center py-4">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading…</span>
+      </div>
+    </div>`;
+
+  const modal = new bootstrap.Modal(modalEl);
+  modal.show();
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
+      headers: getHeaders()
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch product details');
+
+    const data = await response.json();
+    const p = data.data?.product || data.data || data;
+
+    // Status badge colour
+    const statusColor = {
+      available: 'success',
+      low_stock: 'warning',
+      out_of_stock: 'danger',
+      discontinued: 'secondary'
+    }[p.status] || 'secondary';
+
+    // Warehouse rows
+    let warehouseSection = '';
+    if (p.warehouseStock && p.warehouseStock.length > 0) {
+      const rows = p.warehouseStock.map(ws => {
+        const wh = ws.warehouse;
+        const whName = wh?.name || 'Unknown Warehouse';
+        const whCode = wh?.code || '—';
+        const whCity = wh?.location?.city || '';
+        return `
+          <tr>
+            <td>
+              <span class="fw-semibold">${whCode}</span>
+              <div class="text-muted small">${whName}${whCity ? ' · ' + whCity : ''}</div>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-primary fs-6">${ws.quantity}</span>
+            </td>
+            <td class="text-center text-muted small">${ws.minStockLevel ?? '—'}</td>
+            <td class="text-muted small">${ws.location || '—'}</td>
+            <td class="text-muted small">${ws.lastRestocked ? new Date(ws.lastRestocked).toLocaleDateString() : '—'}</td>
+          </tr>`;
+      }).join('');
+
+      warehouseSection = `
+        <h6 class="fw-semibold mt-4 mb-2">
+          <i class="bi bi-building me-1 text-primary"></i>Warehouse Stock Distribution
+        </h6>
+        <div class="table-responsive">
+          <table class="table table-bordered table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Warehouse</th>
+                <th class="text-center">Quantity</th>
+                <th class="text-center">Min Stock</th>
+                <th>Location / Aisle</th>
+                <th>Last Restocked</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    } else {
+      warehouseSection = `
+        <div class="alert alert-secondary mt-3 mb-0 py-2">
+          <i class="bi bi-info-circle me-1"></i>This product is not assigned to any warehouse.
+        </div>`;
+    }
+
+    body.innerHTML = `
+      <!-- Basic info -->
+      <div class="row g-3 mb-2">
+        <div class="col-sm-8">
+          <p class="text-muted small mb-0">Product Name</p>
+          <p class="fw-semibold mb-0 fs-5">${p.name}</p>
+        </div>
+        <div class="col-sm-4 text-sm-end">
+          <span class="badge bg-${statusColor} fs-6 px-3">${p.status?.replace('_', ' ')}</span>
+        </div>
+      </div>
+      <hr class="my-2">
+      <div class="row g-3">
+        <div class="col-sm-4">
+          <p class="text-muted small mb-0">SKU</p>
+          <p class="fw-semibold mb-0">${p.sku}</p>
+        </div>
+        <div class="col-sm-4">
+          <p class="text-muted small mb-0">Category</p>
+          <p class="fw-semibold mb-0 text-capitalize">${p.category?.replace('_', ' ')}</p>
+        </div>
+        <div class="col-sm-4">
+          <p class="text-muted small mb-0">Unit Price</p>
+          <p class="fw-semibold mb-0">Rs ${p.unitPrice?.toLocaleString('en-PK', { minimumFractionDigits: 2 }) || '0.00'}</p>
+        </div>
+        <div class="col-sm-4">
+          <p class="text-muted small mb-0">Total Quantity</p>
+          <p class="fw-semibold mb-0">${p.quantity}</p>
+        </div>
+        <div class="col-sm-4">
+          <p class="text-muted small mb-0">Min Stock Level</p>
+          <p class="fw-semibold mb-0">${p.minStockLevel ?? '—'}</p>
+        </div>
+        <div class="col-sm-4">
+          <p class="text-muted small mb-0">Supplier</p>
+          <p class="fw-semibold mb-0">${p.supplier?.name || 'N/A'}</p>
+        </div>
+        ${p.description ? `
+        <div class="col-12">
+          <p class="text-muted small mb-0">Description</p>
+          <p class="mb-0">${p.description}</p>
+        </div>` : ''}
+      </div>
+      ${warehouseSection}`;
+  } catch (error) {
+    console.error('Error loading product details:', error);
+    body.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+  }
+}
+
 // Note: handleLogout() is provided by navbar.js
 
 // Expose functions to global scope for inline onclick handlers
 window.showEditModal = showEditModal;
 window.deleteProduct = deleteProduct;
+window.showDetailModal = showDetailModal;

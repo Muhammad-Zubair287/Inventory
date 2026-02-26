@@ -121,7 +121,9 @@ class ProductService {
    */
   async getProductById(productId) {
     try {
-      const product = await Product.findById(productId).populate('supplier', 'name email phone');
+      const product = await Product.findById(productId)
+        .populate('supplier', 'name email phone')
+        .populate('warehouseStock.warehouse', 'name code location');
 
       if (!product) {
         throw new ApiError(HTTP_STATUS.NOT_FOUND, 'Product not found');
