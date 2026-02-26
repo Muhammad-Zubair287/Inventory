@@ -61,6 +61,21 @@ async function checkUserAuth() {
     window.location.href = 'admin.html';
     return false;
   }
+
+  // Redirect managers with multiple warehouses if no warehouse is currently selected
+  if (userRole === 'manager') {
+    const warehouseId = localStorage.getItem('warehouseId');
+    const managerWarehouses = localStorage.getItem('managerWarehouses');
+    if (!warehouseId && managerWarehouses) {
+      try {
+        const whs = JSON.parse(managerWarehouses);
+        if (Array.isArray(whs) && whs.length > 1) {
+          window.location.href = 'manager-warehouse-select.html';
+          return false;
+        }
+      } catch (_) {}
+    }
+  }
   
   return true;
 }
@@ -148,6 +163,15 @@ const getHeaders = () => ({
   'Authorization': `Bearer ${getToken()}`
 });
 
+// Switch back to warehouse selection (managers with multiple warehouses)
+function switchWarehouse() {
+  // Clear current warehouse selection so the select page doesn't skip itself
+  localStorage.removeItem('warehouseId');
+  localStorage.removeItem('warehouseName');
+  localStorage.removeItem('warehouseCode');
+  window.location.href = '/pages/manager-warehouse-select.html';
+}
+
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', async () => {
   // Validate authentication first
@@ -158,8 +182,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('userName').textContent = getUserName() || 'User';
   document.getElementById('warehouseName').textContent = getWarehouseName() || 'Warehouse';
 
-  // Hide stock operations for VIEWER role
+  // Show "Switch Warehouse" button for managers who have multiple warehouses
   const userRole = getUserRole();
+  const managerWarehouses = localStorage.getItem('managerWarehouses');
+  if (userRole === 'manager' && managerWarehouses) {
+    try {
+      const whs = JSON.parse(managerWarehouses);
+      if (Array.isArray(whs) && whs.length > 1) {
+        const switchBtn = document.getElementById('switchWarehouseNavItem');
+        if (switchBtn) switchBtn.classList.remove('d-none');
+      }
+    } catch (_) {}
+  }
   if (userRole === 'viewer') {
     // Hide Stock In and Stock Out action cards
     const quickActionsContainer = document.querySelector('.card-body .row.g-4');

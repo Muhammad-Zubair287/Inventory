@@ -177,9 +177,13 @@ async function handleLogin(event) {
       throw new Error(`Your account is ${user.status}. Please contact administrator.`);
     }
 
-    // Store token and user data in localStorage
+    // Store token and core user data in localStorage
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('userId', user._id);
+    localStorage.setItem('userName', user.name);
+    localStorage.setItem('userEmail', user.email);
+    localStorage.setItem('userRole', user.role);
 
     // Show success message
     showAlert('Login successful! Redirecting...', 'success');
@@ -189,11 +193,18 @@ async function handleLogin(event) {
       if (user.role === 'admin') {
         // Admin users go to admin dashboard
         window.location.href = '/pages/admin.html';
+      } else if (user.role === 'manager' && user.warehouses && user.warehouses.length > 1) {
+        // Manager with multiple warehouses — let them choose
+        localStorage.setItem('managerWarehouses', JSON.stringify(user.warehouses));
+        window.location.href = '/pages/manager-warehouse-select.html';
       } else {
-        // Operational users (staff, manager, viewer) go to user dashboard
+        // Operational users (staff, viewer, single-warehouse manager) go to user dashboard
         if (!user.warehouse) {
           throw new Error('No warehouse assigned. Please contact administrator.');
         }
+        localStorage.setItem('warehouseId', user.warehouse._id || user.warehouse);
+        localStorage.setItem('warehouseName', user.warehouse.name || '');
+        localStorage.setItem('warehouseCode', user.warehouse.code || '');
         window.location.href = '/pages/user-dashboard.html';
       }
     }, 1000);
@@ -241,6 +252,8 @@ window.addEventListener('DOMContentLoaded', () => {
     // Redirect to appropriate page based on role
     if (userRole === 'admin') {
       window.location.href = '/pages/admin.html';
+    } else if (userRole === 'manager' && localStorage.getItem('managerWarehouses') && !localStorage.getItem('warehouseId')) {
+      window.location.href = '/pages/manager-warehouse-select.html';
     } else {
       window.location.href = '/pages/user-dashboard.html';
     }

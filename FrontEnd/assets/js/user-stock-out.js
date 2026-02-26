@@ -70,7 +70,22 @@ async function checkStockOutAuth() {
     window.location.href = 'admin.html';
     return false;
   }
-  
+
+  // Redirect manager back to warehouse selection if no warehouse chosen
+  if (user.role === 'manager') {
+    const warehouseId = localStorage.getItem('warehouseId');
+    const managerWarehouses = localStorage.getItem('managerWarehouses');
+    if (!warehouseId && managerWarehouses) {
+      try {
+        const whs = JSON.parse(managerWarehouses);
+        if (Array.isArray(whs) && whs.length > 1) {
+          window.location.href = 'manager-warehouse-select.html';
+          return false;
+        }
+      } catch (_) {}
+    }
+  }
+
   // Redirect VIEWER role to dashboard (no stock operations allowed)
   if (user.role === 'viewer') {
     showAlert('Viewers do not have permission to perform stock operations', 'warning');
@@ -87,6 +102,14 @@ async function checkStockOutAuth() {
 function handleLogout() {
   localStorage.clear();
   window.location.href = 'user-login.html';
+}
+
+// Switch warehouse (managers only)
+function switchWarehouse() {
+  localStorage.removeItem('warehouseId');
+  localStorage.removeItem('warehouseName');
+  localStorage.removeItem('warehouseCode');
+  window.location.href = 'manager-warehouse-select.html';
 }
 
 // Show alert
@@ -185,6 +208,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('warehouse').value = user.warehouseName;
   document.getElementById('warehouseId').value = user.warehouseId;
   document.getElementById('currentWarehouseName').textContent = user.warehouseName;
+
+  // Show "Switch Warehouse" button for managers with multiple warehouses
+  if (user.role === 'manager') {
+    try {
+      const whs = JSON.parse(localStorage.getItem('managerWarehouses') || '[]');
+      if (whs.length > 1) {
+        const switchBtn = document.getElementById('switchWarehouseNavItem');
+        if (switchBtn) switchBtn.classList.remove('d-none');
+      }
+    } catch (_) {}
+  }
 
   // Load data
   loadProducts();

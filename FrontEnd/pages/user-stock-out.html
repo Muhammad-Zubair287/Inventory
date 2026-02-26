@@ -36,6 +36,12 @@
                             <i class="bi bi-building"></i> <span id="warehouseName">Warehouse</span>
                         </span>
                     </li>
+                    <!-- Shown only for managers with multiple warehouses -->
+                    <li class="nav-item d-none" id="switchWarehouseNavItem">
+                        <button class="btn btn-outline-warning btn-sm me-2" onclick="switchWarehouse()">
+                            <i class="bi bi-arrow-left-right"></i> Switch Warehouse
+                        </button>
+                    </li>
                     <li class="nav-item me-3">
                         <div class="currency-selector-container"></div>
                     </li>

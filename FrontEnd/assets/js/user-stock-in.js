@@ -110,7 +110,22 @@ async function checkStockInAuth() {
     window.location.href = 'admin.html';
     return false;
   }
-  
+
+  // Redirect manager back to warehouse selection if no warehouse chosen
+  if (user.role === 'manager') {
+    const warehouseId = localStorage.getItem('warehouseId');
+    const managerWarehouses = localStorage.getItem('managerWarehouses');
+    if (!warehouseId && managerWarehouses) {
+      try {
+        const whs = JSON.parse(managerWarehouses);
+        if (Array.isArray(whs) && whs.length > 1) {
+          window.location.href = 'manager-warehouse-select.html';
+          return false;
+        }
+      } catch (_) {}
+    }
+  }
+
   console.log('✅ [Stock-In] Authentication successful');
   return true;
   
@@ -130,6 +145,14 @@ async function checkStockInAuth() {
 function handleLogout() {
   localStorage.clear();
   window.location.href = 'user-login.html';
+}
+
+// Switch warehouse (managers only)
+function switchWarehouse() {
+  localStorage.removeItem('warehouseId');
+  localStorage.removeItem('warehouseName');
+  localStorage.removeItem('warehouseCode');
+  window.location.href = 'manager-warehouse-select.html';
 }
 
 // Show alert
@@ -281,6 +304,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('warehouse').value = user.warehouseName;
   document.getElementById('warehouseId').value = user.warehouseId;
   document.getElementById('currentWarehouseName').textContent = user.warehouseName;
+
+  // Show "Switch Warehouse" button for managers with multiple warehouses
+  if (user.role === 'manager') {
+    try {
+      const whs = JSON.parse(localStorage.getItem('managerWarehouses') || '[]');
+      if (whs.length > 1) {
+        const switchBtn = document.getElementById('switchWarehouseNavItem');
+        if (switchBtn) switchBtn.classList.remove('d-none');
+      }
+    } catch (_) {}
+  }
 
   // Load data
   loadProducts();
