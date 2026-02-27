@@ -1,12 +1,15 @@
 // User Login JavaScript
 // API_BASE_URL is set by config.js
 
-// Check if already logged in
+// Check if already logged in (requires both a token AND an active session marker).
+// sessionActive is stored in sessionStorage so it clears on browser close,
+// preventing auto-login from a stale localStorage token.
 document.addEventListener('DOMContentLoaded', () => {
   const token = localStorage.getItem('token');
   const userRole = localStorage.getItem('userRole');
+  const sessionActive = sessionStorage.getItem('sessionActive');
   
-  if (token && userRole && userRole !== 'admin') {
+  if (token && userRole && sessionActive && userRole !== 'admin') {
     window.location.href = '/pages/user-dashboard.html';
   }
 });
@@ -70,6 +73,9 @@ document.getElementById('userLoginForm').addEventListener('submit', async (e) =>
     console.log('💾 [Login] Saving to localStorage...');
     // Store user data in localStorage
     localStorage.setItem('token', token);
+    // Mark as active session — sessionStorage is cleared on browser close,
+    // so stale localStorage tokens cannot auto-login on next browser open.
+    sessionStorage.setItem('sessionActive', 'true');
     localStorage.setItem('userId', user._id);
     localStorage.setItem('userName', user.name);
     localStorage.setItem('userEmail', user.email);

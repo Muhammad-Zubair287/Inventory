@@ -180,6 +180,9 @@ async function handleLogin(event) {
     // Store token and core user data in localStorage
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
+    // Mark as active session — stored in sessionStorage so it is cleared when the browser closes.
+    // admin-auth.js checks this marker to prevent auto-login from a stale localStorage token.
+    sessionStorage.setItem('sessionActive', 'true');
     localStorage.setItem('userId', user._id);
     localStorage.setItem('userName', user.name);
     localStorage.setItem('userEmail', user.email);
@@ -243,12 +246,15 @@ passwordInput.addEventListener('input', () => clearError(passwordInput));
 // Attach event listener to form
 loginForm.addEventListener('submit', handleLogin);
 
-// Check if already logged in
+// Check if already logged in (requires both a token AND an active session marker).
+// sessionActive is stored in sessionStorage so it clears on browser close,
+// preventing auto-login from a stale localStorage token.
 window.addEventListener('DOMContentLoaded', () => {
   const token = localStorage.getItem('token');
   const userRole = localStorage.getItem('userRole');
+  const sessionActive = sessionStorage.getItem('sessionActive');
   
-  if (token && userRole) {
+  if (token && userRole && sessionActive) {
     // Redirect to appropriate page based on role
     if (userRole === 'admin') {
       window.location.href = '/pages/admin.html';

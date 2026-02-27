@@ -9,12 +9,16 @@ window.API_BASE_URL = window.API_BASE_URL || 'http://localhost:3001/api';
 // Check authentication and authorization
 async function checkAdminAccess() {
   const token = localStorage.getItem('token');
+  const sessionActive = sessionStorage.getItem('sessionActive');
   
   // Check for user data
   const userStr = localStorage.getItem('user');
 
-  // Redirect to login if no token
-  if (!token) {
+  // Redirect to login if no token OR no active session.
+  // sessionActive is stored in sessionStorage (cleared on browser close),
+  // so a stale localStorage token from a previous session cannot auto-login.
+  if (!token || !sessionActive) {
+    localStorage.clear();
     window.location.href = '/pages/login.html';
     return;
   }
@@ -85,9 +89,10 @@ async function checkAdminAccess() {
     // Only ignore AbortError (from timeout during rapid refresh)
     // All other errors (network errors, server down, etc.) should log out
     if (error.name === 'AbortError') {
-      console.warn('⚠️ Admin auth request timeout - page might be refreshing');
-      // Don't logout on timeout, allow page to continue loading
-      displayAdminInfo(user);
+      console.warn('⚠️ Admin auth request timeout - backend unreachable, redirecting to login');
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = '/pages/login.html';
       return;
     }
     
@@ -133,8 +138,9 @@ function handleLogout() {
     }).catch(err => console.error('Logout error:', err));
   }
 
-  // Clear local storage
+  // Clear local and session storage
   localStorage.clear();
+  sessionStorage.clear();
 
   // Redirect to login
   window.location.href = '/pages/login.html';
