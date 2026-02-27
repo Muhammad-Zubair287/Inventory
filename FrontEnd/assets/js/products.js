@@ -162,16 +162,18 @@ function displayProducts(products) {
         ${product.quantity <= (product.minStockLevel || 5 ) ? '<span class="badge bg-warning ms-1">Low Stock</span>' : ''}
       </td>
       <td>${product.supplier?.name || 'N/A'}</td>
-      <td class="text-nowrap">
-        <button class="btn btn-sm btn-outline-info me-1" onclick="showDetailModal('${product._id}')" title="View Details">
-          <i class="bi bi-eye"></i> Detail
-        </button>
-        <button class="btn btn-sm btn-outline-primary me-1" onclick="showEditModal('${product._id}')" title="Edit Product">
-          <i class="bi bi-pencil-square"></i> Edit
-        </button>
-        <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${product._id}')" title="Delete Product">
-          <i class="bi bi-trash"></i> Delete
-        </button>
+      <td>
+        <div class="d-flex flex-column gap-1">
+          <button class="btn btn-sm btn-outline-info" onclick="showDetailModal('${product._id}')" title="View Details">
+            <i class="bi bi-eye"></i> Detail
+          </button>
+          <button class="btn btn-sm btn-outline-primary" onclick="showEditModal('${product._id}')" title="Edit Product">
+            <i class="bi bi-pencil-square"></i> Edit
+          </button>
+          <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${product._id}')" title="Delete Product">
+            <i class="bi bi-trash"></i> Delete
+          </button>
+        </div>
       </td>
     </tr>
   `).join('');

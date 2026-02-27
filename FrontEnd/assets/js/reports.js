@@ -71,7 +71,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadCategories();
 
   // Load default report
-  await switchReport('inventory');
+  try {
+    await switchReport('inventory');
+  } catch (err) {
+    console.error('❌ [Reports] Failed to load initial report:', err);
+    const reportContainer = document.getElementById('reportContent');
+    if (reportContainer) {
+      showError(reportContainer, `Failed to initialize reports: ${err.message}`);
+    }
+  }
 
   console.log('✅ [Reports] Initialization complete');
 });
@@ -103,23 +111,29 @@ function updateFiltersForReport(reportType) {
   const statusFilter = document.getElementById('statusFilter');
   const dateRangeFilter = document.getElementById('dateRangeFilter');
 
+  const setVisible = (el, visible) => {
+    if (!el) return;
+    const wrapper = el.closest('.col-md-3');
+    if (wrapper) wrapper.style.display = visible ? 'block' : 'none';
+  };
+
   // Show/hide filters based on report type
   switch (reportType) {
     case 'inventory':
-      categoryFilter.closest('.col-md-3').style.display = 'block';
-      statusFilter.closest('.col-md-3').style.display = 'block';
-      dateRangeFilter.closest('.col-md-3').style.display = 'none';
+      setVisible(categoryFilter, true);
+      setVisible(statusFilter, true);
+      setVisible(dateRangeFilter, false);
       break;
     case 'transactions':
     case 'stock-movement':
-      categoryFilter.closest('.col-md-3').style.display = 'none';
-      statusFilter.closest('.col-md-3').style.display = 'none';
-      dateRangeFilter.closest('.col-md-3').style.display = 'block';
+      setVisible(categoryFilter, false);
+      setVisible(statusFilter, false);
+      setVisible(dateRangeFilter, true);
       break;
     case 'suppliers':
-      categoryFilter.closest('.col-md-3').style.display = 'none';
-      statusFilter.closest('.col-md-3').style.display = 'none';
-      dateRangeFilter.closest('.col-md-3').style.display = 'none';
+      setVisible(categoryFilter, false);
+      setVisible(statusFilter, false);
+      setVisible(dateRangeFilter, false);
       break;
   }
 }
@@ -192,12 +206,23 @@ async function loadInventoryReport() {
     if (currentFilters.status) queryParams.append('status', currentFilters.status);
 
     console.log('📊 [Reports] Fetching inventory report...');
-    const response = await fetch(`${window.API_BASE_URL}/dashboard/reports/inventory?${queryParams}`, {
-      headers: getReportHeaders()
-    });
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    let response;
+    try {
+      response = await fetch(`${window.API_BASE_URL}/dashboard/reports/inventory?${queryParams}`, {
+        headers: getReportHeaders(),
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!response.ok) {
-      throw new Error('Failed to fetch inventory report');
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.message || `Server error ${response.status}`);
     }
 
     const data = await response.json();
@@ -205,7 +230,10 @@ async function loadInventoryReport() {
     displayInventoryReport(data.data);
   } catch (error) {
     console.error('❌ [Reports] Error loading inventory report:', error);
-    showError(reportContainer, 'Failed to load inventory report. Please try again.');
+    const msg = error.name === 'AbortError'
+      ? 'Request timed out — the backend may be unreachable. Please check the server and try again.'
+      : `Failed to load inventory report: ${error.message}`;
+    showError(reportContainer, msg);
   }
 }
 
@@ -718,18 +746,79 @@ async function loadStockMovementReport() {
 }
 
 // ============================================================================
-// SUPPLIER REPORT (Placeholder - will load from backend)
+// SUPPLIER REPORT
 // ============================================================================
 async function loadSuppliersReport() {
   const reportContainer = document.getElementById('reportContent');
   if (!reportContainer) return;
 
   showLoading(reportContainer);
-  
-  reportContainer.innerHTML = `
-    <div class="alert alert-info" role="alert">
-      <i class="bi bi-info-circle me-2"></i>
-      <strong>Supplier Performance Report:</strong> This report will show supplier statistics. API endpoint: <code>GET /api/dashboard/reports/suppliers</code>
-    </div>
-  `;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    let response;
+    try {
+      response = await fetch(`${window.API_BASE_URL}/dashboard/reports/suppliers`, {
+        headers: getReportHeaders(),
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.message || `Server error ${response.status}`);
+    }
+
+    const data = await response.json();
+    const suppliers = data.data || [];
+
+    reportContainer.innerHTML = `
+      <div class="card">
+        <div class="card-header bg-white">
+          <h5 class="mb-0"><i class="bi bi-truck me-2"></i>Supplier Performance</h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Supplier</th>
+                  <th>Company</th>
+                  <th>Email</th>
+                  <th class="text-end">Products</th>
+                  <th class="text-end">Total Stock</th>
+                  <th class="text-end">Total Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${suppliers.length === 0 ? `
+                  <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                      <i class="bi bi-inbox fs-1 d-block mb-2"></i>No supplier data found
+                    </td>
+                  </tr>
+                ` : suppliers.map(s => `
+                  <tr>
+                    <td class="fw-semibold">${s.supplier || '-'}</td>
+                    <td>${s.company || '-'}</td>
+                    <td>${s.email || '-'}</td>
+                    <td class="text-end">${s.totalProducts || 0}</td>
+                    <td class="text-end">${(s.totalStock || 0).toLocaleString()}</td>
+                    <td class="text-end fw-semibold">${formatPrice(s.totalValue || 0)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  } catch (error) {
+    console.error('❌ [Reports] Error loading supplier report:', error);
+    showError(reportContainer, `Failed to load supplier report: ${error.name === 'AbortError' ? 'Request timed out' : error.message}`);
+  }
 }
