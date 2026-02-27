@@ -9,8 +9,8 @@ const getReportHeaders = () => ({
   'Authorization': `Bearer ${localStorage.getItem('token')}`
 });
 
-// Format price with currency (uses global function from currency.js)
-const formatPrice = (amount) => {
+// Format price with currency (delegates to global formatPrice from currency.js)
+const formatReportPrice = (amount) => {
   if (typeof window.formatPrice === 'function') {
     return window.formatPrice(amount);
   }
@@ -277,7 +277,7 @@ function displayInventoryReport(reportData) {
             <div class="d-flex align-items-center justify-content-between">
               <div>
                 <h6 class="card-subtitle mb-2" style="color: #ffffff !important; opacity: 0.85;">Total Value</h6>
-                <h3 class="card-title mb-0" style="color: #ffffff !important; font-weight: 700;">${formatPrice(summary.totalValue || 0)}</h3>
+                <h3 class="card-title mb-0" style="color: #ffffff !important; font-weight: 700;">${formatReportPrice(summary.totalValue || 0)}</h3>
               </div>
               <i class="bi bi-currency-exchange fs-1" style="color: #ffffff !important; opacity: 0.5;"></i>
             </div>
@@ -290,7 +290,7 @@ function displayInventoryReport(reportData) {
             <div class="d-flex align-items-center justify-content-between">
               <div>
                 <h6 class="card-subtitle mb-2" style="color: #ffffff !important; opacity: 0.85;">Avg Price</h6>
-                <h3 class="card-title mb-0" style="color: #ffffff !important; font-weight: 700;">${formatPrice(summary.averagePrice || 0)}</h3>
+                <h3 class="card-title mb-0" style="color: #ffffff !important; font-weight: 700;">${formatReportPrice(summary.averagePrice || 0)}</h3>
               </div>
               <i class="bi bi-graph-up fs-1" style="color: #ffffff !important; opacity: 0.5;"></i>
             </div>
@@ -360,8 +360,8 @@ function displayInventoryReport(reportData) {
                       </span>
                     </td>
                     <td class="text-end">${minStock}</td>
-                    <td class="text-end">${formatPrice(unitPrice)}</td>
-                    <td class="text-end fw-semibold">${formatPrice(totalValue)}</td>
+                    <td class="text-end">${formatReportPrice(unitPrice)}</td>
+                    <td class="text-end fw-semibold">${formatReportPrice(totalValue)}</td>
                     <td>${statusBadge}</td>
                     <td>${product.supplier?.name || '-'}</td>
                   </tr>
@@ -556,7 +556,7 @@ async function loadTransactionsReport() {
                       <small class="text-muted">SKU: ${t.product?.sku || 'N/A'}</small>
                     </td>
                     <td><strong>${t.quantity}</strong></td>
-                    <td>${formatPrice(t.unitPrice || 0)}</td>
+                    <td>${formatReportPrice(t.unitPrice || 0)}</td>
                     <td>${t.warehouse?.name || 'N/A'}</td>
                     <td>
                       <span class="badge bg-success">Completed</span>
@@ -808,7 +808,7 @@ async function loadSuppliersReport() {
                     <td>${s.email || '-'}</td>
                     <td class="text-end">${s.totalProducts || 0}</td>
                     <td class="text-end">${(s.totalStock || 0).toLocaleString()}</td>
-                    <td class="text-end fw-semibold">${formatPrice(s.totalValue || 0)}</td>
+                    <td class="text-end fw-semibold">${formatReportPrice(s.totalValue || 0)}</td>
                   </tr>
                 `).join('')}
               </tbody>
