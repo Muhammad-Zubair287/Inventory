@@ -104,6 +104,11 @@ async function loadProducts() {
     if (searchInput.value) {
       params.append('search', searchInput.value);
     }
+    // Pass the selected warehouseId so the backend returns products for the correct warehouse
+    // (fixes the bug where manager-selected warehouse was overridden by the user's default warehouse)
+    if (user.warehouseId) {
+      params.append('warehouseId', user.warehouseId);
+    }
     
     const response = await fetch(`${window.API_BASE_URL}/user-dashboard/warehouse-products?${params.toString()}`, {
       headers: getHeaders()

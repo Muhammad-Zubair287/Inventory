@@ -238,7 +238,14 @@ async function loadDashboardStats() {
     console.log('🔑 [User Dashboard] Token:', getToken() ? 'Present' : 'Missing');
     console.log('🔑 [User Dashboard] Headers:', getHeaders());
     
-    const response = await fetch(`${window.API_BASE_URL}/user-dashboard/stats`, {
+    // Pass the currently-selected warehouseId so the backend uses the correct warehouse
+    // (critical for managers who selected a warehouse from the multi-warehouse select page)
+    const selectedWarehouseId = getWarehouseId();
+    const statsUrl = selectedWarehouseId
+      ? `${window.API_BASE_URL}/user-dashboard/stats?warehouseId=${encodeURIComponent(selectedWarehouseId)}`
+      : `${window.API_BASE_URL}/user-dashboard/stats`;
+
+    const response = await fetch(statsUrl, {
       headers: getHeaders()
     });
 
@@ -262,7 +269,10 @@ async function loadDashboardStats() {
     if (data.success && data.data) {
       console.log('✅ [User Dashboard] Updating dashboard with data:', data.data);
       
-      // Save user and warehouse data to localStorage if available
+      // Save user data to localStorage if available (but NOT warehouse — it is already
+      // correctly set by login.js or manager-warehouse-select.js; overwriting it here
+      // was the root cause of the "Ali Warehouse" bug where the user's primary/default
+      // warehouse replaced the manager's selected warehouse)
       if (data.data.user) {
         console.log('💾 [User Dashboard] Saving user data to localStorage');
         localStorage.setItem('userId', data.data.user._id);
@@ -271,11 +281,19 @@ async function loadDashboardStats() {
         localStorage.setItem('userRole', data.data.user.role);
       }
       
+      // Only update the warehouse display text — do NOT overwrite warehouseId/warehouseName
+      // in localStorage as that would clobber the warehouse the manager selected.
+      // If the user has no warehouse in localStorage yet (first login edge-case), save it.
       if (data.data.warehouse) {
-        console.log('💾 [User Dashboard] Saving warehouse data to localStorage');
-        localStorage.setItem('warehouseId', data.data.warehouse._id);
-        localStorage.setItem('warehouseName', data.data.warehouse.name);
-        localStorage.setItem('warehouseCode', data.data.warehouse.code || '');
+        if (!localStorage.getItem('warehouseId')) {
+          console.log('💾 [User Dashboard] No warehouse in localStorage, saving from API response');
+          localStorage.setItem('warehouseId', data.data.warehouse._id);
+          localStorage.setItem('warehouseName', data.data.warehouse.name);
+          localStorage.setItem('warehouseCode', data.data.warehouse.code || '');
+        }
+        // Always keep the DOM in sync with the warehouse the stats were fetched for
+        const whNameEl = document.getElementById('warehouseName');
+        if (whNameEl) whNameEl.textContent = getWarehouseName() || data.data.warehouse.name || 'Warehouse';
       }
       
       updateDashboardStats(data.data);

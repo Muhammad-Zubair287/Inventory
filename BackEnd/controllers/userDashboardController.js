@@ -18,9 +18,12 @@ import Transaction from '../models/Transaction.js';
  */
 export const getUserDashboardStats = asyncHandler(async (req, res) => {
   const userId = req.user.id;
+  const requestedWarehouseId = req.query.warehouseId;
 
-  // Get user with warehouse
-  const user = await User.findById(userId).populate('warehouse', 'code name location capacity');
+  // Get user with warehouse(s)
+  const user = await User.findById(userId)
+    .populate('warehouse', 'code name location capacity')
+    .populate('warehouses', 'code name location capacity');
 
   if (!user) {
     throw new ApiError(HTTP_STATUS.NOT_FOUND, 'User not found');
@@ -31,11 +34,36 @@ export const getUserDashboardStats = asyncHandler(async (req, res) => {
     throw new ApiError(HTTP_STATUS.FORBIDDEN, 'Admin users should use admin dashboard');
   }
 
-  if (!user.warehouse) {
+  if (!user.warehouse && (!user.warehouses || user.warehouses.length === 0)) {
     throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'No warehouse assigned to this user');
   }
 
-  const warehouseId = user.warehouse._id;
+  // Determine which warehouse to use:
+  // 1. If a warehouseId was passed in the query and the user has access to it, use it
+  // 2. Otherwise fall back to user.warehouse (primary warehouse)
+  let selectedWarehouse = user.warehouse;
+
+  if (requestedWarehouseId) {
+    // Check if the requested warehouse is the user's primary warehouse
+    const primaryMatch = user.warehouse && user.warehouse._id.toString() === requestedWarehouseId;
+    // Check if it's in the user's warehouses array (for managers)
+    const multiMatch = user.warehouses && user.warehouses.find(
+      w => w._id.toString() === requestedWarehouseId
+    );
+
+    if (primaryMatch) {
+      selectedWarehouse = user.warehouse;
+    } else if (multiMatch) {
+      selectedWarehouse = multiMatch;
+    } else {
+      throw new ApiError(HTTP_STATUS.FORBIDDEN, 'Access to the requested warehouse is not permitted');
+    }
+  } else if (!selectedWarehouse && user.warehouses && user.warehouses.length > 0) {
+    // No primary warehouse but has multi-warehouses; use the first one as fallback
+    selectedWarehouse = user.warehouses[0];
+  }
+
+  const warehouseId = selectedWarehouse._id;
 
   // Get warehouse-specific stats
   const [
@@ -109,7 +137,7 @@ export const getUserDashboardStats = asyncHandler(async (req, res) => {
           email: user.email,
           role: user.role,
         },
-        warehouse: user.warehouse,
+        warehouse: selectedWarehouse,
         stats: {
           totalProducts,
           lowStockCount: lowStockProductsResult.length,
@@ -131,15 +159,39 @@ export const getUserDashboardStats = asyncHandler(async (req, res) => {
  */
 export const getWarehouseProducts = asyncHandler(async (req, res) => {
   const userId = req.user.id;
-  const { page = 1, limit = 10, search } = req.query;
+  const { page = 1, limit = 10, search, warehouseId: requestedWarehouseId } = req.query;
 
-  const user = await User.findById(userId);
-  if (!user || !user.warehouse) {
+  const user = await User.findById(userId)
+    .populate('warehouse', 'code name location')
+    .populate('warehouses', 'code name location');
+
+  if (!user) {
+    throw new ApiError(HTTP_STATUS.NOT_FOUND, 'User not found');
+  }
+
+  // Determine warehouse to use (same logic as stats endpoint)
+  let selectedWarehouseId;
+
+  if (requestedWarehouseId) {
+    const primaryMatch = user.warehouse && user.warehouse._id.toString() === requestedWarehouseId;
+    const multiMatch = user.warehouses && user.warehouses.find(
+      w => w._id.toString() === requestedWarehouseId
+    );
+    if (primaryMatch || multiMatch) {
+      selectedWarehouseId = requestedWarehouseId;
+    } else {
+      throw new ApiError(HTTP_STATUS.FORBIDDEN, 'Access to the requested warehouse is not permitted');
+    }
+  } else if (user.warehouse) {
+    selectedWarehouseId = user.warehouse._id;
+  } else if (user.warehouses && user.warehouses.length > 0) {
+    selectedWarehouseId = user.warehouses[0]._id;
+  } else {
     throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'No warehouse assigned');
   }
 
   const filter = {
-    'warehouseStock.warehouse': user.warehouse,
+    'warehouseStock.warehouse': selectedWarehouseId,
   };
 
   if (search) {
