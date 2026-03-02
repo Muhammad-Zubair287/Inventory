@@ -5,6 +5,7 @@ import {
   getTransactionStats,
   getTransactionById,
   getTransactionsByProduct,
+  getProductTransactionSummary,
   deleteTransaction,
 } from '../controllers/transactionController.js';
 import validate from '../middleware/validate.js';
@@ -27,8 +28,13 @@ router.use(authenticate);
 // @access  Private
 router.get('/stats', getTransactionStats);
 
+// @route   GET /api/transactions/product-summary
+// @desc    Get product-level transaction summary (unique products with totals)
+// @access  Private (Admin)
+router.get('/product-summary', authorize([USER_ROLES.ADMIN]), getProductTransactionSummary);
+
 // @route   GET /api/transactions/product/:productId
-// @desc    Get transactions by product
+// @desc    Get transactions by product with optional date filters
 // @access  Private
 router.get('/product/:productId', getTransactionsByProduct);
 

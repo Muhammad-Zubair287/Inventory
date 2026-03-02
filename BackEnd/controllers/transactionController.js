@@ -61,8 +61,21 @@ export const getTransactionById = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @route   GET /api/transactions/product-summary
+ * @desc    Get product-level transaction summary (unique products with totals)
+ * @access  Private (Admin)
+ */
+export const getProductTransactionSummary = asyncHandler(async (req, res) => {
+  const result = await transactionService.getProductTransactionSummary(req.query);
+
+  res.status(HTTP_STATUS.OK).json(
+    new ApiResponse(HTTP_STATUS.OK, result, 'Product transaction summary fetched successfully')
+  );
+});
+
+/**
  * @route   GET /api/transactions/product/:productId
- * @desc    Get transactions by product
+ * @desc    Get transactions by product with optional date filters
  * @access  Private
  */
 export const getTransactionsByProduct = asyncHandler(async (req, res) => {

@@ -125,6 +125,10 @@ function updateFiltersForReport(reportType) {
       setVisible(dateRangeFilter, false);
       break;
     case 'transactions':
+      setVisible(categoryFilter, false);
+      setVisible(statusFilter, false);
+      setVisible(dateRangeFilter, false);
+      break;
     case 'stock-movement':
       setVisible(categoryFilter, false);
       setVisible(statusFilter, false);
@@ -461,153 +465,207 @@ function showError(container, message) {
 console.log('✅ [Reports] Script fully loaded and ready');
 
 // ============================================================================
-// TRANSACTIONS REPORT (Placeholder - will load from backend)
+// TRANSACTIONS REPORT — Product Summary View
+// Shows one row per unique product with aggregated totals
 // ============================================================================
-async function loadTransactionsReport() {
+let txSummaryPage = 1;
+const TX_SUMMARY_PAGE_SIZE = 20;
+
+async function loadTransactionsReport(page = 1) {
   const reportContainer = document.getElementById('reportContent');
   if (!reportContainer) return;
 
+  txSummaryPage = page;
   showLoading(reportContainer);
-  
+
   try {
-    // Get date range filter
-    const dateRange = document.getElementById('dateRangeFilter')?.value || '30';
-    const daysAgo = parseInt(dateRange);
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - daysAgo);
-    
-    console.log(`📅 [Transactions Report] Filtering for last ${daysAgo} days (from ${startDate.toLocaleDateString()})`);
-    
-    // Build query params with date filter
+    const searchInput = document.getElementById('txSearchInput');
+    const search = searchInput ? searchInput.value.trim() : '';
+
     const params = new URLSearchParams({
-      sort: '-createdAt',
-      limit: '1000', // Increased limit
-      startDate: startDate.toISOString()
+      page,
+      limit: TX_SUMMARY_PAGE_SIZE,
     });
-    
-    const response = await fetch(`${window.API_BASE_URL}/transactions?${params.toString()}`, {
-      headers: getReportHeaders()
-    });
+    if (search) params.append('search', search);
+
+    const response = await fetch(
+      `${window.API_BASE_URL}/transactions/product-summary?${params}`,
+      { headers: getReportHeaders() }
+    );
 
     if (!response.ok) {
-      throw new Error('Failed to fetch transactions data');
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Server error ${response.status}`);
     }
 
     const result = await response.json();
-    const transactions = result.data.transactions || [];
+    const { summary = [], pagination = {} } = result.data || {};
 
-    // Filter by date range (client-side as backup)
-    const filteredTransactions = transactions.filter(t => {
-      const txDate = new Date(t.createdAt);
-      return txDate >= startDate;
-    });
+    // ── Summary stats header ─────────────────────────────────────────────────
+    const totalIn  = summary.reduce((s, r) => s + (r.totalStockIn  || 0), 0);
+    const totalOut = summary.reduce((s, r) => s + (r.totalStockOut || 0), 0);
 
-    // Generate report HTML
     reportContainer.innerHTML = `
-      <div class="card">
-        <div class="card-header">
-          <h5 class="mb-0">
-            <i class="bi bi-receipt me-2"></i>
-            Transactions Report (Last ${daysAgo} days)
-          </h5>
+      <!-- Summary Cards -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <div class="card" style="border-left: 4px solid #0d6efd;">
+            <div class="card-body d-flex align-items-center gap-3">
+              <i class="bi bi-boxes fs-1 text-primary"></i>
+              <div>
+                <div class="text-muted small fw-semibold">Unique Products</div>
+                <div class="h4 mb-0 fw-bold">${pagination.total || 0}</div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="card-body">
+        <div class="col-md-4">
+          <div class="card" style="border-left: 4px solid #198754;">
+            <div class="card-body d-flex align-items-center gap-3">
+              <i class="bi bi-plus-circle fs-1 text-success"></i>
+              <div>
+                <div class="text-muted small fw-semibold">Total Stock In (this page)</div>
+                <div class="h4 mb-0 fw-bold">${totalIn.toLocaleString()}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card" style="border-left: 4px solid #dc3545;">
+            <div class="card-body d-flex align-items-center gap-3">
+              <i class="bi bi-dash-circle fs-1 text-danger"></i>
+              <div>
+                <div class="text-muted small fw-semibold">Total Stock Out (this page)</div>
+                <div class="h4 mb-0 fw-bold">${totalOut.toLocaleString()}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="card mb-3">
+        <div class="card-body py-2">
+          <div class="input-group input-group-sm" style="max-width: 380px;">
+            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" id="txSearchInput" class="form-control border-start-0"
+              placeholder="Search by product name or SKU…"
+              value="${search}"
+              oninput="clearTimeout(window._txSearchTimer); window._txSearchTimer=setTimeout(()=>loadTransactionsReport(1),400)">
+          </div>
+        </div>
+      </div>
+
+      <!-- Products Table -->
+      <div class="card">
+        <div class="card-header bg-white d-flex align-items-center justify-content-between">
+          <h5 class="mb-0"><i class="bi bi-table me-2"></i>Products — Transaction Summary</h5>
+          <small class="text-muted">Showing ${(page - 1) * TX_SUMMARY_PAGE_SIZE + 1}–${Math.min(page * TX_SUMMARY_PAGE_SIZE, pagination.total || 0)} of ${pagination.total || 0}</small>
+        </div>
+        <div class="card-body p-0">
           <div class="table-responsive">
-            <table class="table table-striped table-hover">
-              <thead>
+            <table class="table table-hover table-striped mb-0">
+              <thead class="table-light">
                 <tr>
-                  <th>Transaction #</th>
-                  <th style="white-space: nowrap;">Date</th>
-                  <th>Type</th>
-                  <th>Product</th>
-                  <th>Qty</th>
-                  <th>Unit Price</th>
-                  <th>Warehouse</th>
-                  <th style="min-width: 120px;">Status</th>
+                  <th>Product Name</th>
+                  <th>SKU / Code</th>
+                  <th class="text-center">Total Stock In</th>
+                  <th class="text-center">Total Stock Out</th>
+                  <th class="text-center">Current Stock</th>
+                  <th class="text-center">Transactions</th>
+                  <th>Last Activity</th>
+                  <th class="text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
-                ${filteredTransactions.length === 0 ? `
+                ${summary.length === 0 ? `
                   <tr>
-                    <td colspan="8" class="text-center text-muted py-4">
+                    <td colspan="8" class="text-center text-muted py-5">
                       <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                      No transactions found in the selected period
+                      No transaction data found
                     </td>
                   </tr>
-                ` : filteredTransactions.map(t => `
-                  <tr>
-                    <td><span class="badge bg-secondary">${t.transactionNumber || 'N/A'}</span></td>
-                    <td style="white-space: nowrap;">${new Date(t.createdAt).toLocaleDateString('en-US', { 
-                      year: 'numeric', 
-                      month: 'short', 
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}</td>
-                    <td>
-                      ${t.type === 'stock_in' 
-                        ? '<span class="badge bg-success"><i class="bi bi-plus-circle me-1"></i>Stock In</span>'
-                        : t.type === 'stock_out'
-                        ? '<span class="badge bg-danger"><i class="bi bi-dash-circle me-1"></i>Stock Out</span>'
-                        : '<span class="badge bg-info">' + t.type + '</span>'}
-                    </td>
-                    <td>
-                      <strong>${t.product?.name || 'N/A'}</strong><br>
-                      <small class="text-muted">SKU: ${t.product?.sku || 'N/A'}</small>
-                    </td>
-                    <td><strong>${t.quantity}</strong></td>
-                    <td>${formatReportPrice(t.unitPrice || 0)}</td>
-                    <td>${t.warehouse?.name || 'N/A'}</td>
-                    <td>
-                      <span class="badge bg-success">Completed</span>
-                    </td>
-                  </tr>
-                `).join('')}
+                ` : summary.map(row => {
+                  const product = row.product || {};
+                  const currentStock = product.quantity || 0;
+                  const lastDate = row.lastTransaction
+                    ? new Date(row.lastTransaction).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                    : '—';
+                  const stockBadgeClass = currentStock > 0 ? 'bg-success' : 'bg-danger';
+
+                  return `
+                    <tr>
+                      <td>
+                        <div class="fw-semibold">${product.name || '—'}</div>
+                        <small class="text-muted">${product.category || ''}</small>
+                      </td>
+                      <td><code>${product.sku || '—'}</code></td>
+                      <td class="text-center">
+                        <span class="badge bg-success rounded-pill px-3">${(row.totalStockIn || 0).toLocaleString()}</span>
+                      </td>
+                      <td class="text-center">
+                        <span class="badge bg-danger rounded-pill px-3">${(row.totalStockOut || 0).toLocaleString()}</span>
+                      </td>
+                      <td class="text-center">
+                        <span class="badge ${stockBadgeClass} rounded-pill px-3">${currentStock.toLocaleString()}</span>
+                      </td>
+                      <td class="text-center">
+                        <span class="badge bg-secondary rounded-pill">${row.totalTransactions || 0}</span>
+                      </td>
+                      <td><small class="text-muted">${lastDate}</small></td>
+                      <td class="text-center">
+                        <a href="product-transactions.html?productId=${product._id}&productName=${encodeURIComponent(product.name || '')}"
+                           class="btn btn-sm btn-outline-primary">
+                          <i class="bi bi-eye me-1"></i>View Details
+                        </a>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
               </tbody>
             </table>
           </div>
-          
-          ${filteredTransactions.length > 0 ? `
-            <div class="row mt-4">
-              <div class="col-md-4">
-                <div class="card bg-primary text-white">
-                  <div class="card-body">
-                    <h6 class="card-title"><i class="bi bi-receipt me-2"></i>Total Transactions</h6>
-                    <h3 class="mb-0">${filteredTransactions.length}</h3>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="card bg-success text-white">
-                  <div class="card-body">
-                    <h6 class="card-title"><i class="bi bi-plus-circle me-2"></i>Stock In</h6>
-                    <h3 class="mb-0">${filteredTransactions.filter(t => t.type === 'stock_in').length}</h3>
-                    <small>Total Qty: ${filteredTransactions.filter(t => t.type === 'stock_in').reduce((sum, t) => sum + t.quantity, 0)}</small>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="card bg-danger text-white">
-                  <div class="card-body">
-                    <h6 class="card-title"><i class="bi bi-dash-circle me-2"></i>Stock Out</h6>
-                    <h3 class="mb-0">${filteredTransactions.filter(t => t.type === 'stock_out').length}</h3>
-                    <small>Total Qty: ${filteredTransactions.filter(t => t.type === 'stock_out').reduce((sum, t) => sum + t.quantity, 0)}</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ` : ''}
         </div>
+
+        <!-- Pagination -->
+        ${pagination.pages > 1 ? `
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+          <small class="text-muted">Page ${pagination.page} of ${pagination.pages}</small>
+          <nav>
+            <ul class="pagination pagination-sm mb-0">
+              <li class="page-item ${page <= 1 ? 'disabled' : ''}">
+                <button class="page-link" onclick="loadTransactionsReport(${page - 1})">
+                  <i class="bi bi-chevron-left"></i>
+                </button>
+              </li>
+              ${Array.from({ length: pagination.pages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === pagination.pages || Math.abs(p - page) <= 2)
+                .reduce((acc, p, idx, arr) => {
+                  if (idx > 0 && p - arr[idx - 1] > 1) acc.push('...');
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map(p => p === '...'
+                  ? `<li class="page-item disabled"><span class="page-link">…</span></li>`
+                  : `<li class="page-item ${p === page ? 'active' : ''}">
+                       <button class="page-link" onclick="loadTransactionsReport(${p})">${p}</button>
+                     </li>`
+                ).join('')}
+              <li class="page-item ${page >= pagination.pages ? 'disabled' : ''}">
+                <button class="page-link" onclick="loadTransactionsReport(${page + 1})">
+                  <i class="bi bi-chevron-right"></i>
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+        ` : ''}
       </div>
     `;
+
   } catch (error) {
-    console.error('Error loading transactions report:', error);
-    reportContainer.innerHTML = `
-      <div class="alert alert-danger" role="alert">
-        <i class="bi bi-exclamation-triangle me-2"></i>
-        <strong>Error:</strong> Failed to load transactions report. ${error.message}
-      </div>
-    `;
+    console.error('❌ [Transactions Report] Error:', error);
+    showError(reportContainer, `Failed to load transactions report: ${error.message}`);
   }
 }
 

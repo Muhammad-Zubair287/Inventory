@@ -168,21 +168,36 @@ class TransactionService {
   }
 
   /**
-   * Get transactions by product
+   * Get transactions by product with optional date filtering
    */
   async getTransactionsByProduct(productId, options = {}) {
     try {
-      const { page = 1, limit = 10 } = options;
-      const skip = (page - 1) * limit;
+      const { page = 1, limit = 20, startDate = '', endDate = '' } = options;
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+
+      const query = { product: productId };
+
+      if (startDate || endDate) {
+        query.createdAt = {};
+        if (startDate) query.createdAt.$gte = new Date(startDate);
+        if (endDate) {
+          // Include the full end day
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          query.createdAt.$lte = end;
+        }
+      }
 
       const [transactions, total] = await Promise.all([
-        Transaction.find({ product: productId })
+        Transaction.find(query)
+          .populate('product', 'name sku')
           .populate('supplier', 'name company')
+          .populate('warehouse', 'name')
           .populate('performedBy', 'name email')
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(parseInt(limit)),
-        Transaction.countDocuments({ product: productId }),
+        Transaction.countDocuments(query),
       ]);
 
       return {
@@ -191,12 +206,109 @@ class TransactionService {
           page: parseInt(page),
           limit: parseInt(limit),
           total,
-          pages: Math.ceil(total / limit),
+          pages: Math.ceil(total / parseInt(limit)),
         },
       };
     } catch (error) {
       logger.error('Error fetching product transactions:', error);
       throw new ApiError(HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Failed to fetch transactions');
+    }
+  }
+
+  /**
+   * Get product-level transaction summary (one row per product)
+   * Aggregates total stock in / out grouped by product
+   */
+  async getProductTransactionSummary(options = {}) {
+    try {
+      const { page = 1, limit = 20, startDate = '', endDate = '', search = '' } = options;
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+
+      const matchFilter = {};
+
+      if (startDate || endDate) {
+        matchFilter.createdAt = {};
+        if (startDate) matchFilter.createdAt.$gte = new Date(startDate);
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          matchFilter.createdAt.$lte = end;
+        }
+      }
+
+      const pipeline = [
+        { $match: matchFilter },
+        {
+          $group: {
+            _id: '$product',
+            totalStockIn: {
+              $sum: { $cond: [{ $eq: ['$type', 'stock_in'] }, '$quantity', 0] },
+            },
+            totalStockOut: {
+              $sum: { $cond: [{ $eq: ['$type', 'stock_out'] }, '$quantity', 0] },
+            },
+            totalTransactions: { $sum: 1 },
+            lastTransaction: { $max: '$createdAt' },
+          },
+        },
+        {
+          $lookup: {
+            from: 'products',
+            localField: '_id',
+            foreignField: '_id',
+            as: 'product',
+          },
+        },
+        { $unwind: '$product' },
+        ...(search
+          ? [
+              {
+                $match: {
+                  $or: [
+                    { 'product.name': { $regex: search, $options: 'i' } },
+                    { 'product.sku': { $regex: search, $options: 'i' } },
+                  ],
+                },
+              },
+            ]
+          : []),
+        {
+          $project: {
+            _id: 1,
+            product: { _id: 1, name: 1, sku: 1, quantity: 1, category: 1 },
+            totalStockIn: 1,
+            totalStockOut: 1,
+            totalTransactions: 1,
+            lastTransaction: 1,
+          },
+        },
+        { $sort: { lastTransaction: -1 } },
+        {
+          $facet: {
+            data: [{ $skip: skip }, { $limit: parseInt(limit) }],
+            totalCount: [{ $count: 'count' }],
+          },
+        },
+      ];
+
+      const result = await Transaction.aggregate(pipeline);
+      const summary = result[0]?.data || [];
+      const total = result[0]?.totalCount[0]?.count || 0;
+
+      logger.info(`Product transaction summary: ${summary.length} products found`);
+
+      return {
+        summary,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit)),
+        },
+      };
+    } catch (error) {
+      logger.error('Error fetching product transaction summary:', error);
+      throw new ApiError(HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Failed to fetch product transaction summary');
     }
   }
 

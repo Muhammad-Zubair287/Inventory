@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Product Transaction History — Inventory Management System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/theme.css?v=4">
+    <link rel="stylesheet" href="../assets/css/style-pro.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <style>
+      .preset-btn.active {
+        background-color: #0d6efd;
+        color: #fff;
+        border-color: #0d6efd;
+      }
+      .filter-card {
+        border-left: 4px solid #0d6efd;
+      }
+    </style>
+  </head>
+  <body class="bg-light">
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top">
+      <div class="container-fluid">
+        <span class="navbar-brand mb-0 h5 fw-bold">
+          <i class="bi bi-boxes text-primary me-2"></i>Inventory Management System
+        </span>
+        <div class="d-flex align-items-center gap-3">
+          <div class="currency-selector-container"></div>
+          <div class="dropdown">
+            <button class="btn btn-link text-dark p-0 d-flex align-items-center text-decoration-none" type="button" data-bs-toggle="dropdown">
+              <div class="me-2 text-end d-none d-md-block">
+                <div class="fw-semibold small admin-name">Admin User</div>
+                <div class="text-muted" style="font-size:0.75rem;">Administrator</div>
+              </div>
+              <img id="navbar-profile-img" src="https://ui-avatars.com/api/?name=Admin+User&background=random"
+                   alt="Profile" class="rounded-circle navbar-profile-img" style="width:40px;height:40px;object-fit:cover;">
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow">
+              <li><a class="dropdown-item" href="settings.html"><i class="bi bi-person me-2"></i>Profile</a></li>
+              <li><a class="dropdown-item" href="settings.html"><i class="bi bi-gear me-2"></i>Settings</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item text-danger logout-btn" href="#"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container-fluid">
+      <div class="row">
+        <!-- Sidebar -->
+        <div id="sidebar-container"></div>
+
+        <!-- Main Content -->
+        <main class="col-lg-10 col-md-9 py-4 px-4">
+          <div class="container-fluid">
+
+            <!-- Page Header -->
+            <header class="mb-4">
+              <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-3">
+                  <a href="reports.html" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Reports
+                  </a>
+                  <div>
+                    <h2 class="h4 mb-0">
+                      <i class="bi bi-clock-history text-primary me-2"></i>
+                      Transaction History
+                    </h2>
+                    <p class="text-muted mb-0 small" id="productSubtitle">Loading product details…</p>
+                  </div>
+                </div>
+                <button id="exportCsvBtn" class="btn btn-success btn-sm">
+                  <i class="bi bi-file-earmark-excel me-1"></i>Export CSV
+                </button>
+              </div>
+            </header>
+
+            <!-- Product Info Card -->
+            <div class="card mb-4 filter-card" id="productInfoCard" style="display:none;">
+              <div class="card-body d-flex align-items-center gap-4 flex-wrap">
+                <div>
+                  <div class="text-muted small fw-semibold">Product Name</div>
+                  <div class="fw-bold fs-5" id="infoProductName">—</div>
+                </div>
+                <div>
+                  <div class="text-muted small fw-semibold">SKU</div>
+                  <div class="fw-semibold" id="infoProductSku">—</div>
+                </div>
+                <div>
+                  <div class="text-muted small fw-semibold">Category</div>
+                  <div id="infoProductCategory">—</div>
+                </div>
+                <div class="ms-auto d-flex gap-3">
+                  <div class="text-center">
+                    <div class="text-muted small fw-semibold">Total Stock In</div>
+                    <div class="h5 mb-0 text-success fw-bold" id="infoTotalIn">—</div>
+                  </div>
+                  <div class="text-center">
+                    <div class="text-muted small fw-semibold">Total Stock Out</div>
+                    <div class="h5 mb-0 text-danger fw-bold" id="infoTotalOut">—</div>
+                  </div>
+                  <div class="text-center">
+                    <div class="text-muted small fw-semibold">Current Stock</div>
+                    <div class="h5 mb-0 fw-bold" id="infoCurrentStock">—</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Date Filter Card -->
+            <div class="card mb-4">
+              <div class="card-body">
+                <div class="row g-3 align-items-end">
+                  <!-- Quick Presets -->
+                  <div class="col-12 col-md-auto">
+                    <label class="form-label small fw-semibold d-block mb-2">Quick Filters</label>
+                    <div class="btn-group flex-wrap" role="group" id="presetButtons">
+                      <button class="btn btn-sm btn-outline-primary preset-btn" data-preset="today">Today</button>
+                      <button class="btn btn-sm btn-outline-primary preset-btn" data-preset="2days">Last 2 Days</button>
+                      <button class="btn btn-sm btn-outline-primary preset-btn" data-preset="1week">1 Week</button>
+                      <button class="btn btn-sm btn-outline-primary preset-btn" data-preset="2weeks">2 Weeks</button>
+                      <button class="btn btn-sm btn-outline-primary preset-btn" data-preset="1month">1 Month</button>
+                      <button class="btn btn-sm btn-outline-primary preset-btn" data-preset="1year">1 Year</button>
+                      <button class="btn btn-sm btn-outline-secondary preset-btn active" data-preset="all">All Time</button>
+                    </div>
+                  </div>
+
+                  <!-- Custom Range -->
+                  <div class="col-12 col-md-auto d-flex align-items-end gap-2 flex-wrap">
+                    <div>
+                      <label class="form-label small fw-semibold" for="fromDate">From Date</label>
+                      <input type="date" class="form-control form-control-sm" id="fromDate" style="min-width:150px;">
+                    </div>
+                    <div>
+                      <label class="form-label small fw-semibold" for="toDate">To Date</label>
+                      <input type="date" class="form-control form-control-sm" id="toDate" style="min-width:150px;">
+                    </div>
+                    <button class="btn btn-primary btn-sm" id="applyCustomDate">
+                      <i class="bi bi-funnel me-1"></i>Apply
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" id="clearDateFilter">
+                      <i class="bi bi-x-circle me-1"></i>Clear
+                    </button>
+                  </div>
+
+                  <!-- Active Filter Badge -->
+                  <div class="col-12 col-md-auto ms-md-auto">
+                    <span id="activeFilterBadge" class="badge bg-primary py-2 px-3 d-none">
+                      <i class="bi bi-funnel-fill me-1"></i><span id="activeFilterText"></span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Transactions Table -->
+            <div id="transactionsContent">
+              <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Loading…</span>
+                </div>
+                <p class="text-muted mt-3">Loading transaction history…</p>
+              </div>
+            </div>
+
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../assets/js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../assets/js/currency.js"></script>
+    <script src="../assets/js/navbar.js"></script>
+    <script src="../assets/js/sidebar-scroll.js"></script>
+    <script src="../assets/js/admin-auth.js"></script>
+    <script src="../assets/js/product-transactions.js"></script>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        if (typeof initCurrencySelector === 'function') initCurrencySelector();
+      });
+    </script>
+
+    <!-- Sidebar loader -->
+    <script>
+      fetch('../components/sidebar.html').then(r => r.text()).then(html => {
+        const c = document.getElementById('sidebar-container');
+        c.innerHTML = html;
+        c.querySelectorAll('script').forEach(s => {
+          const ns = document.createElement('script');
+          if (s.src) { ns.src = s.src; } else { ns.textContent = s.textContent; }
+          document.body.appendChild(ns);
+        });
+        const p = window.location.pathname.split('/').pop();
+        document.querySelectorAll('.nav-link').forEach(l => {
+          if (l.getAttribute('href') === `/pages/${p}`) l.classList.add('active');
+        });
+      }).catch(e => console.error('Error loading sidebar:', e));
+    </script>
+  </body>
+</html>
