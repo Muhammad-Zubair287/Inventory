@@ -327,16 +327,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const productInput = document.getElementById('product');
 
   if (productSearch) {
-    // Show dropdown when user types
-    productSearch.addEventListener('input', (e) => {
-      const searchTerm = e.target.value.toLowerCase().trim();
-      
-      if (searchTerm.length === 0) {
-        productDropdown.style.display = 'none';
-        return;
-      }
-
-      // Check if products are loaded
+    // Shared function: filter products and render dropdown
+    function showProductDropdown(searchTerm) {
       if (!Array.isArray(productsData) || productsData.length === 0) {
         productDropdown.innerHTML = '<div class="list-group-item text-warning"><i class="bi bi-hourglass-split me-2"></i>Loading products...</div>';
         productDropdown.style.display = 'block';
@@ -344,12 +336,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      // Filter products based on search term
-      const filteredProducts = productsData.filter(product => {
-        const productName = (product.name || '').toLowerCase();
-        const productSku = (product.sku || '').toLowerCase();
-        return productName.includes(searchTerm) || productSku.includes(searchTerm);
-      });
+      const term = searchTerm.toLowerCase().trim();
+      const filteredProducts = term.length === 0
+        ? productsData
+        : productsData.filter(product =>
+            (product.name || '').toLowerCase().includes(term) ||
+            (product.sku || '').toLowerCase().includes(term)
+          );
 
       if (filteredProducts.length === 0) {
         productDropdown.innerHTML = '<div class="list-group-item text-muted"><i class="bi bi-search me-2"></i>No products found</div>';
@@ -357,7 +350,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      // Display filtered products
       productDropdown.innerHTML = filteredProducts.map(product => `
         <button type="button" class="list-group-item list-group-item-action" data-id="${product._id}" data-product='${JSON.stringify(product)}'>
           <div class="d-flex justify-content-between">
@@ -375,56 +367,53 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       productDropdown.style.display = 'block';
 
-      // Add click handlers to dropdown items
       productDropdown.querySelectorAll('button').forEach(btn => {
         btn.addEventListener('click', function() {
           const productId = this.getAttribute('data-id');
           const product = JSON.parse(this.getAttribute('data-product'));
           const productName = this.querySelector('strong').textContent;
-          
-          // Set hidden input value
+
           productInput.value = productId;
-          
-          // Set search input to show selected product
           productSearch.value = productName;
-          
-          // Update current stock display
           document.getElementById('currentStock').textContent = product.quantity || 0;
-          
-          // Update stock info panel
+
           const stockInfo = document.getElementById('currentStockInfo');
           const warehouseStock = product.warehouseStock?.find(s => s.warehouse.toString() === user.warehouseId);
           const currentQty = warehouseStock?.quantity || 0;
-          
+
           stockInfo.innerHTML = `
             <p><strong>Product:</strong> ${product.name}</p>
             <p><strong>SKU:</strong> ${product.sku}</p>
             <p><strong>Current Stock:</strong> <span class="badge bg-info">${currentQty}</span></p>
             <p><strong>Category:</strong> ${product.category || 'N/A'}</p>
           `;
-          
-          // Set default unit price if available
+
           if (product.unitPrice) {
             document.getElementById('unitPrice').value = product.unitPrice;
           }
-          
-          // Hide dropdown
+
           productDropdown.style.display = 'none';
         });
       });
+    }
+
+    // Filter as user types
+    productSearch.addEventListener('input', (e) => {
+      showProductDropdown(e.target.value);
+    });
+
+    // Show full list on click / focus
+    productSearch.addEventListener('focus', () => {
+      showProductDropdown(productSearch.value);
+    });
+    productSearch.addEventListener('click', () => {
+      showProductDropdown(productSearch.value);
     });
 
     // Hide dropdown when clicking outside
     document.addEventListener('click', (e) => {
       if (!productSearch.contains(e.target) && !productDropdown.contains(e.target)) {
         productDropdown.style.display = 'none';
-      }
-    });
-
-    // Show dropdown on focus if there's text
-    productSearch.addEventListener('focus', (e) => {
-      if (e.target.value.length > 0) {
-        productSearch.dispatchEvent(new Event('input'));
       }
     });
   }

@@ -402,7 +402,7 @@ function displayRecentTransactions(transactions) {
         </td>
         <td><span class="badge bg-${typeBadge}">${typeText}</span></td>
         <td>${transaction.quantity}</td>
-        <td>${transaction.createdBy?.name || 'System'}</td>
+        <td>${transaction.performedBy?.name || 'System'}</td>
       </tr>
     `;
   }).join('');

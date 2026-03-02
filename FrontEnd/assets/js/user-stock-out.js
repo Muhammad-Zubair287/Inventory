@@ -2,6 +2,9 @@
 // API_BASE_URL is set by config.js
 // getToken() is provided by navbar.js
 
+// Store products for searching
+let productsData = [];
+
 // Get user data from local storage
 function getUser() {
   const userRole = localStorage.getItem('userRole');
@@ -125,10 +128,9 @@ function showAlert(message, type = 'info') {
   setTimeout(() => alertDiv.remove(), 5000);
 }
 
-// Load products
+// Load products into productsData array
 async function loadProducts() {
   try {
-    const user = getUser();
     const response = await fetch(`${window.API_BASE_URL}/products`, {
       headers: getHeaders()
     });
@@ -136,16 +138,21 @@ async function loadProducts() {
     if (!response.ok) throw new Error('Failed to load products');
 
     const data = await response.json();
-    const productSelect = document.getElementById('product');
-    
-    productSelect.innerHTML = '<option value="">Select Product</option>';
-    data.data.products.forEach(product => {
-      const option = document.createElement('option');
-      option.value = product._id;
-      option.textContent = `${product.name} (${product.sku})`;
-      option.dataset.product = JSON.stringify(product);
-      productSelect.appendChild(option);
-    });
+    const productSearch = document.getElementById('productSearch');
+
+    if (data.data && data.data.products && Array.isArray(data.data.products)) {
+      productsData = data.data.products;
+      if (productSearch) {
+        productSearch.placeholder = `Click or type to search ${productsData.length} products...`;
+        productSearch.disabled = false;
+      }
+    } else {
+      productsData = [];
+      if (productSearch) {
+        productSearch.placeholder = 'No products available';
+        productSearch.disabled = true;
+      }
+    }
   } catch (error) {
     console.error('Error loading products:', error);
     showAlert('Failed to load products', 'danger');
@@ -224,38 +231,95 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadProducts();
   loadRecentTransactions();
 
-  // Product selection change
-  document.getElementById('product').addEventListener('change', function() {
-    const selectedOption = this.options[this.selectedIndex];
-    if (selectedOption.value) {
-      const product = JSON.parse(selectedOption.dataset.product);
-      const stockInfo = document.getElementById('currentStockInfo');
-      
-      // Find stock for user's warehouse
-      const warehouseStock = product.warehouseStock?.find(s => s.warehouse.toString() === user.warehouseId);
-      const currentQty = warehouseStock?.quantity || 0;
-      
-      stockInfo.innerHTML = `
-        <p><strong>Product:</strong> ${product.name}</p>
-        <p><strong>SKU:</strong> ${product.sku}</p>
-        <p><strong>Available Stock:</strong> <span class="badge ${currentQty > 0 ? 'bg-success' : 'bg-danger'}">${currentQty}</span></p>
-        <p><strong>Category:</strong> ${product.category}</p>
-      `;
-      
-      // Update available quantity display
-      document.getElementById('availableQty').textContent = `Available: ${currentQty}`;
-      document.getElementById('quantity').max = currentQty;
-      
-      // Set default unit price if available
-      if (product.unitPrice) {
-        document.getElementById('unitPrice').value = product.unitPrice;
-      }
-    } else {
-      document.getElementById('currentStockInfo').innerHTML = 
-        '<p class="text-muted small">Select a product to view current stock</p>';
-      document.getElementById('availableQty').textContent = 'Available: 0';
+  // Searchable product dropdown
+  const productSearch = document.getElementById('productSearch');
+  const productDropdown = document.getElementById('productDropdown');
+  const productInput = document.getElementById('product');
+
+  function selectProduct(product) {
+    productInput.value = product._id;
+    productSearch.value = product.name;
+    productDropdown.style.display = 'none';
+
+    const warehouseStock = product.warehouseStock?.find(s => s.warehouse.toString() === user.warehouseId);
+    const currentQty = warehouseStock?.quantity || 0;
+
+    document.getElementById('currentStockInfo').innerHTML = `
+      <p><strong>Product:</strong> ${product.name}</p>
+      <p><strong>SKU:</strong> ${product.sku}</p>
+      <p><strong>Available Stock:</strong> <span class="badge ${currentQty > 0 ? 'bg-success' : 'bg-danger'}">${currentQty}</span></p>
+      <p><strong>Category:</strong> ${product.category || 'N/A'}</p>
+    `;
+
+    document.getElementById('availableQty').textContent = `Available: ${currentQty}`;
+    document.getElementById('quantity').max = currentQty;
+
+    if (product.unitPrice) {
+      document.getElementById('unitPrice').value = product.unitPrice;
     }
-  });
+  }
+
+  function showProductDropdown(searchTerm) {
+    if (!Array.isArray(productsData) || productsData.length === 0) {
+      productDropdown.innerHTML = '<div class="list-group-item text-warning"><i class="bi bi-hourglass-split me-2"></i>Loading products...</div>';
+      productDropdown.style.display = 'block';
+      loadProducts();
+      return;
+    }
+
+    const term = searchTerm.toLowerCase().trim();
+    const filteredProducts = term.length === 0
+      ? productsData
+      : productsData.filter(p =>
+          (p.name || '').toLowerCase().includes(term) ||
+          (p.sku || '').toLowerCase().includes(term)
+        );
+
+    if (filteredProducts.length === 0) {
+      productDropdown.innerHTML = '<div class="list-group-item text-muted"><i class="bi bi-search me-2"></i>No products found</div>';
+      productDropdown.style.display = 'block';
+      return;
+    }
+
+    productDropdown.innerHTML = filteredProducts.map(product => {
+      const ws = product.warehouseStock?.find(s => s.warehouse.toString() === user.warehouseId);
+      const qty = ws?.quantity || 0;
+      return `
+        <button type="button" class="list-group-item list-group-item-action" data-id="${product._id}" data-product='${JSON.stringify(product)}'>
+          <div class="d-flex justify-content-between">
+            <div>
+              <strong>${product.name}</strong><br>
+              <small class="text-muted">SKU: ${product.sku}</small>
+            </div>
+            <div class="text-end">
+              <span class="badge ${qty > 0 ? 'bg-success' : 'bg-danger'}">${qty} in stock</span>
+            </div>
+          </div>
+        </button>
+      `;
+    }).join('');
+
+    productDropdown.style.display = 'block';
+
+    productDropdown.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const product = JSON.parse(this.getAttribute('data-product'));
+        selectProduct(product);
+      });
+    });
+  }
+
+  if (productSearch) {
+    productSearch.addEventListener('input', (e) => showProductDropdown(e.target.value));
+    productSearch.addEventListener('focus', () => showProductDropdown(productSearch.value));
+    productSearch.addEventListener('click', () => showProductDropdown(productSearch.value));
+
+    document.addEventListener('click', (e) => {
+      if (!productSearch.contains(e.target) && !productDropdown.contains(e.target)) {
+        productDropdown.style.display = 'none';
+      }
+    });
+  }
 
   // Validate quantity on input
   document.getElementById('quantity').addEventListener('input', function() {
