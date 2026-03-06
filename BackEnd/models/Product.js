@@ -184,7 +184,6 @@ productSchema.pre('findOneAndUpdate', async function() {
 });
 
 // Indexes for better query performance
-productSchema.index({ sku: 1 });
 productSchema.index({ category: 1 });
 productSchema.index({ status: 1 });
 productSchema.index({ name: 'text', description: 'text' }); // Text search

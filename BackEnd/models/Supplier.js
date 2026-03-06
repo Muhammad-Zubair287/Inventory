@@ -100,7 +100,6 @@ const supplierSchema = new mongoose.Schema(
 );
 
 // Indexes
-supplierSchema.index({ code: 1 });
 supplierSchema.index({ status: 1 });
 supplierSchema.index({ email: 1 });
 supplierSchema.index({ name: 'text' }); // Text search

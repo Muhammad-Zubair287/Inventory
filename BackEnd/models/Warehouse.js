@@ -82,7 +82,6 @@ const warehouseSchema = new mongoose.Schema({
 });
 
 // Indexes
-warehouseSchema.index({ code: 1 });
 warehouseSchema.index({ status: 1 });
 warehouseSchema.index({ 'location.city': 1 });
 warehouseSchema.index({ 'location.state': 1 });

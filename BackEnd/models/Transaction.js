@@ -87,7 +87,6 @@ const transactionSchema = new mongoose.Schema(
 );
 
 // Indexes
-transactionSchema.index({ transactionNumber: 1 });
 transactionSchema.index({ type: 1 });
 transactionSchema.index({ status: 1 });
 transactionSchema.index({ product: 1 });
