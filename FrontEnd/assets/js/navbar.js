@@ -44,7 +44,7 @@ window.getToken = getToken; // Make globally accessible
 // Update admin name and profile image in navbar
 function updateAdminName() {
   const user = getUser();
-  const UPLOAD_BASE_URL = 'http://localhost:3001';
+  const UPLOAD_BASE_URL = window.API_BASE_URL.replace('/api', '');
   
   console.log('Updating navbar with user:', user);
   
@@ -361,19 +361,19 @@ async function performGlobalSearch(query) {
   try {
     // Search in multiple endpoints
     const [products, suppliers, warehouses, users] = await Promise.allSettled([
-      fetch(`http://localhost:3001/api/products?search=${encodeURIComponent(query)}&limit=3`, {
+      fetch(`${window.API_BASE_URL}/products?search=${encodeURIComponent(query)}&limit=3`, {
         headers: { 'Authorization': `Bearer ${token}` }
       }).then(res => res.ok ? res.json() : { data: [] }),
       
-      fetch(`http://localhost:3001/api/suppliers?search=${encodeURIComponent(query)}&limit=3`, {
+      fetch(`${window.API_BASE_URL}/suppliers?search=${encodeURIComponent(query)}&limit=3`, {
         headers: { 'Authorization': `Bearer ${token}` }
       }).then(res => res.ok ? res.json() : { data: [] }),
       
-      fetch(`http://localhost:3001/api/warehouses?search=${encodeURIComponent(query)}&limit=3`, {
+      fetch(`${window.API_BASE_URL}/warehouses?search=${encodeURIComponent(query)}&limit=3`, {
         headers: { 'Authorization': `Bearer ${token}` }
       }).then(res => res.ok ? res.json() : { data: [] }),
       
-      fetch(`http://localhost:3001/api/users?search=${encodeURIComponent(query)}&limit=3`, {
+      fetch(`${window.API_BASE_URL}/users?search=${encodeURIComponent(query)}&limit=3`, {
         headers: { 'Authorization': `Bearer ${token}` }
       }).then(res => res.ok ? res.json() : { data: [] })
     ]);

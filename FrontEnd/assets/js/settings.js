@@ -7,7 +7,7 @@
 window.API_BASE_URL = window.API_BASE_URL || 'http://localhost:3001/api';
 
 // Use window.API_BASE_URL throughout this file to avoid conflicts
-const UPLOAD_BASE_URL = 'http://localhost:3001';
+const UPLOAD_BASE_URL = window.API_BASE_URL ? window.API_BASE_URL.replace('/api', '') : 'http://localhost:3001';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Check authentication - use localStorage (consistent with admin-auth.js)

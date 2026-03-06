@@ -92,13 +92,6 @@ app.use(express.static(path.join(__dirname, '../FrontEnd')));
 // Static Files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Import models to ensure they are registered with Mongoose
-import './models/User.js';
-import './models/Product.js';
-import './models/Supplier.js';
-import './models/Transaction.js';
-import './models/Warehouse.js';
-
 // Import and use route modules
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
@@ -148,5 +141,4 @@ app.listen(PORT, () => {
   logger.info(`🚀 Server is running on http://localhost:${PORT}`);
   logger.info(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
-// ... your existing routes and middleware ...
 

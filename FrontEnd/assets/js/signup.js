@@ -4,7 +4,7 @@
  */
 
 // API base URL
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = window.API_BASE_URL || 'http://localhost:3001/api';
 
 // Get form elements
 const signupForm = document.getElementById('signupForm');

@@ -78,6 +78,7 @@ class TransactionService {
         type = '',
         product = '',
         supplier = '',
+        warehouse = '',
         startDate = '',
         endDate = '',
         sortBy = 'createdAt',
@@ -100,6 +101,11 @@ class TransactionService {
       // Filter by supplier
       if (supplier) {
         query.supplier = supplier;
+      }
+
+      // Filter by warehouse
+      if (warehouse) {
+        query.warehouse = warehouse;
       }
 
       // Filter by date range
@@ -372,11 +378,13 @@ class TransactionService {
         throw new ApiError(HTTP_STATUS.NOT_FOUND, 'Transaction not found');
       }
 
-      // Reverse the stock change
+      // Reverse the stock change (both global and per-warehouse)
       if (transaction.type === TRANSACTION_TYPES.STOCK_IN) {
         await productService.updateStock(transaction.product, transaction.quantity, 'subtract');
+        await productService.updateWarehouseStock(transaction.product, transaction.warehouse, transaction.quantity, 'subtract');
       } else if (transaction.type === TRANSACTION_TYPES.STOCK_OUT) {
         await productService.updateStock(transaction.product, transaction.quantity, 'add');
+        await productService.updateWarehouseStock(transaction.product, transaction.warehouse, transaction.quantity, 'add');
       }
 
       await transaction.deleteOne();

@@ -126,9 +126,6 @@ async function checkStockInAuth() {
     }
   }
 
-  console.log('✅ [Stock-In] Authentication successful');
-  return true;
-  
   // Redirect VIEWER role to dashboard (no stock operations allowed)
   if (user.role === 'viewer') {
     showAlert('Viewers do not have permission to perform stock operations', 'warning');
@@ -137,7 +134,8 @@ async function checkStockInAuth() {
     }, 2000);
     return false;
   }
-  
+
+  console.log('✅ [Stock-In] Authentication successful');
   return true;
 }
 

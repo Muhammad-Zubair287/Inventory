@@ -210,7 +210,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadProducts() {
   try {
     console.log('Loading products...'); // Debug log
-    const response = await fetch(`${window.API_BASE_URL}/products`, {
+    const response = await fetch(`${window.API_BASE_URL}/products?limit=1000`, {
       headers: getHeaders()
     });
 
@@ -353,7 +353,7 @@ async function loadWarehouses() {
     if (warehouseSelect && data.data.warehouses) {
       warehouseSelect.innerHTML = '<option value="">Choose a warehouse</option>' +
         data.data.warehouses.map(warehouse => 
-          `<option value="${warehouse._id}">${warehouse.name} - ${warehouse.location}</option>`
+          `<option value="${warehouse._id}">${warehouse.name} - ${warehouse.location?.city || ''}</option>`
         ).join('');
     }
   } catch (error) {
