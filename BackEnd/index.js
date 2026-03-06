@@ -44,7 +44,7 @@ const corsOptions = {
 };
 
 // Middleware
-app.options('*', cors(corsOptions)); // Handle preflight requests for all routes
+app.options('/{*path}', cors(corsOptions)); // Handle preflight requests for all routes (Express 5 syntax)
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
