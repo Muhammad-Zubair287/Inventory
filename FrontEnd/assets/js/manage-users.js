@@ -94,7 +94,7 @@ function debounce(func, wait) {
 async function loadUsers() {
   try {
     const params = new URLSearchParams();
-    params.append('limit', '1000');
+    params.append('limit', '100');
     
     if (searchInput && searchInput.value) {
       params.append('search', searchInput.value);
@@ -177,7 +177,7 @@ function displayUsers(users) {
 // Load warehouses for dropdown and checklist
 async function loadWarehouses() {
   try {
-    const response = await fetch(`${API_BASE_URL}/warehouses?limit=1000`, {
+    const response = await fetch(`${API_BASE_URL}/warehouses?limit=100`, {
       headers: getHeaders()
     });
 
