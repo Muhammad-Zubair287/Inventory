@@ -7,6 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
    <link rel="stylesheet" href="../assets/css/theme.css">
     <link rel="stylesheet" href="../assets/css/style-pro.css">
+    <link rel="stylesheet" href="../assets/css/product-autofill.css">
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -158,6 +159,51 @@
           </div>
           <div class="modal-body">
             <form id="addProductForm">
+              <!-- Select Existing Product Field -->
+              <div class="mb-3">
+                <label for="existingProductSelect" class="form-label">
+                  <i class="bi bi-search me-1"></i>Select Existing Product <span class="text-muted fw-normal">(optional)</span>
+                </label>
+                <div class="input-group">
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="existingProductSelect"
+                    placeholder="Search by name or SKU..."
+                    autocomplete="off"
+                  >
+                  <button
+                    class="btn btn-outline-secondary"
+                    type="button"
+                    id="clearExistingProduct"
+                    title="Clear selection"
+                    style="display:none;"
+                  >
+                    <i class="bi bi-x"></i>
+                  </button>
+                </div>
+                <div
+                  id="existingProductDropdown"
+                  class="border rounded mt-1 bg-white position-absolute"
+                  style="display:none; max-height:250px; overflow-y:auto; width:100%; z-index:1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1);"
+                >
+                  <div class="p-3 text-muted text-center small">
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    Loading products...
+                  </div>
+                </div>
+                <small class="text-muted d-block mt-1">
+                  💡 Start typing to search existing products and auto-fill form fields
+                </small>
+              </div>
+
+              <!-- Auto-selected product info -->
+              <div id="autoSelectedProductInfo" style="display:none;" class="alert alert-info alert-dismissible fade show mb-3" role="alert">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Selected Product:</strong> <span id="selectedProductName"></span>
+                <button type="button" class="btn-close" id="clearAutoFill" aria-label="Clear"></button>
+              </div>
+
               <div class="mb-3">
                 <label for="productName" class="form-label">Product Name <span class="text-danger">*</span></label>
                 <input type="text" class="form-control" id="productName" name="name" required placeholder="Enter product name">

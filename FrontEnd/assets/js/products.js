@@ -71,7 +71,215 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.logout-btn').forEach(btn => {
     btn.addEventListener('click', handleLogout);
   });
+
+  // Initialize existing product autocomplete
+  initializeExistingProductAutocomplete();
 });
+
+/**
+ * Initialize Existing Product Autocomplete
+ * Allows users to search and auto-fill form from existing products
+ */
+function initializeExistingProductAutocomplete() {
+  const existingProductInput = document.getElementById('existingProductSelect');
+  const existingProductDropdown = document.getElementById('existingProductDropdown');
+  const clearBtn = document.getElementById('clearExistingProduct');
+  const clearAutoFillBtn = document.getElementById('clearAutoFill');
+  let allProducts = [];
+  let selectedProductId = null;
+
+  if (!existingProductInput) return;
+
+  // Load all products for autocomplete on input focus
+  existingProductInput.addEventListener('focus', async () => {
+    if (allProducts.length === 0) {
+      await loadProductsForAutocomplete();
+    }
+    if (allProducts.length > 0) {
+      showAutocompleteDropdown(allProducts);
+    }
+  });
+
+  // Filter products on input
+  existingProductInput.addEventListener('input', () => {
+    const query = existingProductInput.value.trim();
+    clearBtn.style.display = query ? 'block' : 'none';
+
+    if (query.length === 0) {
+      if (allProducts.length > 0) {
+        showAutocompleteDropdown(allProducts);
+      }
+      return;
+    }
+
+    const filtered = allProducts.filter(p =>
+      p.name.toLowerCase().includes(query.toLowerCase()) ||
+      p.sku.toLowerCase().includes(query.toLowerCase())
+    );
+
+    showAutocompleteDropdown(filtered);
+  });
+
+  // Handle clear button
+  clearBtn?.addEventListener('click', () => {
+    existingProductInput.value = '';
+    clearBtn.style.display = 'none';
+    selectedProductId = null;
+    document.getElementById('autoSelectedProductInfo').style.display = 'none';
+    existingProductDropdown.style.display = 'none';
+    existingProductInput.focus();
+  });
+
+  // Handle clear auto-fill button
+  clearAutoFillBtn?.addEventListener('click', () => {
+    const form = document.getElementById('addProductForm');
+    if (form) {
+      form.reset();
+      existingProductInput.value = '';
+      clearBtn.style.display = 'none';
+      selectedProductId = null;
+      document.getElementById('autoSelectedProductInfo').style.display = 'none';
+      existingProductDropdown.style.display = 'none';
+    }
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (
+      e.target !== existingProductInput &&
+      e.target !== existingProductDropdown &&
+      !existingProductDropdown.contains(e.target)
+    ) {
+      existingProductDropdown.style.display = 'none';
+    }
+  });
+
+  /**
+   * Load all products for autocomplete
+   */
+  async function loadProductsForAutocomplete() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/products?limit=100`, {
+        headers: getHeaders()
+      });
+
+      if (!response.ok) {
+        console.warn('Failed to load products for autocomplete');
+        return;
+      }
+
+      const data = await response.json();
+      allProducts = data.data?.products || [];
+      console.log(`✅ Loaded ${allProducts.length} products for autocomplete`);
+    } catch (error) {
+      console.error('Error loading products for autocomplete:', error);
+    }
+  }
+
+  /**
+   * Show autocomplete dropdown with product list
+   */
+  function showAutocompleteDropdown(products) {
+    existingProductDropdown.style.display = 'block';
+
+    if (products.length === 0) {
+      existingProductDropdown.innerHTML = `
+        <div class="p-3 text-muted text-center small">
+          <i class="bi bi-search me-1"></i>No products found
+        </div>
+      `;
+      return;
+    }
+
+    existingProductDropdown.innerHTML = products.map(product => `
+      <div
+        class="p-2 border-bottom cursor-pointer"
+        style="cursor:pointer; padding:10px 12px; transition: background-color 0.2s;"
+        onmouseover="this.style.backgroundColor='#f8f9fa'"
+        onmouseout="this.style.backgroundColor='transparent'"
+        onclick="selectExistingProduct('${product._id}', '${product.name.replace(/'/g, "\\'")}', '${product.sku}')"
+      >
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <strong class="d-block">${product.name}</strong>
+            <small class="text-muted">SKU: ${product.sku}</small>
+          </div>
+          <span class="badge bg-secondary">₨${product.unitPrice?.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Store function globally for onclick
+  window.selectExistingProduct = async (productId, productName, productSku) => {
+    selectedProductId = productId;
+
+    try {
+      // Fetch full product details
+      const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
+        headers: getHeaders()
+      });
+
+      if (!response.ok) {
+        showAlert('Failed to load product details', 'danger');
+        return;
+      }
+
+      const data = await response.json();
+      const product = data.data?.product || data.data || data;
+
+      // Auto-fill form fields
+      autoFillProductForm(product);
+
+      // Update UI
+      existingProductInput.value = `${product.name} (${product.sku})`;
+      clearBtn.style.display = 'block';
+      existingProductDropdown.style.display = 'none';
+
+      // Show confirmation alert
+      document.getElementById('selectedProductName').textContent = `${product.name} (SKU: ${product.sku})`;
+      document.getElementById('autoSelectedProductInfo').style.display = 'block';
+
+      console.log('✅ Product auto-filled:', product.name);
+    } catch (error) {
+      console.error('Error selecting product:', error);
+      showAlert('Failed to load product details', 'danger');
+    }
+  };
+}
+
+/**
+ * Auto-fill product form from selected product
+ */
+function autoFillProductForm(product) {
+  // Fill editable fields - user can still override these
+  const fieldMappings = {
+    'productSKU': product.sku,
+    'productName': product.name,
+    'productCategory': product.category,
+    'productPrice': product.unitPrice,
+    'productDescription': product.description || '',
+    'productMinStock': product.minStockLevel || 10,
+    'productSupplier': product.supplier?._id || '',
+  };
+
+  for (const [fieldId, value] of Object.entries(fieldMappings)) {
+    const field = document.getElementById(fieldId);
+    if (field) {
+      field.value = value;
+      // Add visual feedback that field was auto-filled
+      field.classList.add('auto-filled');
+      // Remove class after animation
+      setTimeout(() => field.classList.remove('auto-filled'), 1500);
+    }
+  }
+
+  // Quantity and warehouse assignment stay empty for user to choose
+  const qtyField = document.getElementById('productQuantity');
+  if (qtyField) {
+    qtyField.value = '0';
+  }
+}
 
 // Debounce function for search
 function debounce(func, wait) {
@@ -93,7 +301,7 @@ async function loadProducts() {
     console.log('Token:', getToken() ? 'exists' : 'missing');
     
     const params = new URLSearchParams();
-    params.append('limit', '1000'); // fetch all products (no pagination UI)
+    params.append('limit', '100'); // fetch all products (no pagination UI)
     
     if (searchInput && searchInput.value) {
       params.append('search', searchInput.value);

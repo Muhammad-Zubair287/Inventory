@@ -1,0 +1,97 @@
+/* ========================================================================
+   PRODUCT AUTO-FILL FEATURE STYLES
+   Styles for the existing product selector and auto-fill functionality
+   ======================================================================== */
+
+/* Auto-filled form field animation */
+.auto-filled {
+  animation: pulse-success 0.6s ease-in-out;
+  background-color: #d4edda !important;
+}
+
+@keyframes pulse-success {
+  0%, 100% {
+    background-color: #fff;
+  }
+  50% {
+    background-color: #d4edda;
+  }
+}
+
+/* Autocomplete dropdown styling */
+#existingProductDropdown {
+  border: 1px solid #dee2e6;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  background: white;
+}
+
+#existingProductDropdown > div {
+  border-color: #e9ecef !important;
+}
+
+#existingProductDropdown > div:last-child {
+  border-bottom: none;
+}
+
+#existingProductDropdown .badge {
+  font-size: 0.75rem;
+  padding: 0.35rem 0.5rem;
+}
+
+/* Selected product info alert */
+#autoSelectedProductInfo {
+  border-left: 4px solid #0984e3;
+  background-color: #e7f3ff;
+  border-color: #b3d9ff;
+}
+
+#autoSelectedProductInfo .alert-link {
+  color: #0984e3;
+}
+
+/* Input group positioning for autocomplete */
+#existingProductSelect {
+  position: relative;
+}
+
+.input-group {
+  position: relative;
+}
+
+/* Smooth transitions for buttons */
+#clearExistingProduct {
+  animation: fadeIn 0.2s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Autocomplete item hover state */
+#existingProductDropdown > div[onclick] {
+  transition: background-color 0.2s ease;
+}
+
+#existingProductDropdown > div[onclick]:hover {
+  background-color: #f8f9fa;
+}
+
+/* Loading state for autocomplete */
+#existingProductDropdown .spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+  border-width: 0.15em;
+}
+
+/* Info text styling */
+#existingProductSelect + .form-text {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #6c757d;
+}
