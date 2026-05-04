@@ -21,7 +21,6 @@ Add these in Railway's **Variables** section:
 
 ```env
 NODE_ENV=production
-PORT=3001
 MONGODB_URI=mongodb+srv://zubairm1815_db_user:7t7ciPVavIPaUmQ3@backend-api-inventory.gpbnqus.mongodb.net/?appName=Backend-Api-Inventory
 JWT_SECRET=your_jwt_secret_key_change_this_in_production
 JWT_EXPIRES_IN=1d
@@ -29,6 +28,7 @@ CORS_ORIGIN=https://your-frontend-name.vercel.app
 ```
 
 ⚠️ **Important**: Replace `https://your-frontend-name.vercel.app` with your actual Vercel URL after frontend deployment.
+Railway injects the runtime `PORT` automatically, so you do not need to set it manually for this app.
 
 ### 3. Build & Start Commands
 Railway should auto-detect these, but verify:
@@ -54,11 +54,17 @@ https://inventory-management-system-production-30b1.up.railway.app
 6. **Output Directory**: Leave as default
 
 ### 2. Environment Configuration
-Your `config.js` is already configured to automatically detect:
-- **Local**: `http://localhost:3001/api`
-- **Production**: `https://inventory-management-system-production-30b1.up.railway.app/api`
+Update `FrontEnd/assets/js/config.js` before deploying and replace:
 
-No environment variables needed on Vercel!
+```js
+const PRODUCTION_API_BASE_URL = 'https://YOUR-RAILWAY-APP.up.railway.app/api';
+```
+
+The frontend uses:
+- **Local**: `http://localhost:5000/api`
+- **Production**: your Railway API URL
+
+No Vercel environment variables are required for this static frontend.
 
 ### 3. Deploy
 Click **Deploy** and wait for Vercel to build.
@@ -80,6 +86,12 @@ CORS_ORIGIN=https://your-project-name.vercel.app
 ```
 
 Then **redeploy** the Railway backend.
+
+### Update Frontend API URL
+After Railway gives you a public URL, set the production API base URL in:
+- [FrontEnd/assets/js/config.js](FrontEnd/assets/js/config.js)
+
+Replace the placeholder `YOUR-RAILWAY-APP` value with your actual Railway service domain, then redeploy the Vercel frontend.
 
 ---
 
