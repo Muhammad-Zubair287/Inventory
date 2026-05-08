@@ -186,6 +186,8 @@ async function loadProducts() {
     const params = new URLSearchParams({ limit: '1000' });
     if (user?.warehouseId) {
       params.append('warehouseId', user.warehouseId);
+      // Stock-in should show every product in this warehouse context, including zero quantity.
+      params.append('includeZeroStock', 'true');
     }
 
     const response = await fetch(`${window.API_BASE_URL}/products?${params.toString()}`, {
@@ -367,7 +369,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       productDropdown.innerHTML = filteredProducts.map(product => `
-        <button type="button" class="list-group-item list-group-item-action" data-id="${product._id}" data-product='${JSON.stringify(product)}'>
+        <button type="button" class="list-group-item list-group-item-action" data-id="${product._id}">
           <div class="d-flex justify-content-between">
             <div>
               <strong>${product.name}</strong>
@@ -386,7 +388,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       productDropdown.querySelectorAll('button').forEach(btn => {
         btn.addEventListener('click', function() {
           const productId = this.getAttribute('data-id');
-          const product = JSON.parse(this.getAttribute('data-product'));
+          const product = productsData.find((item) => String(item._id) === String(productId));
+          if (!product) {
+            showAlert('Selected product could not be loaded. Please try again.', 'warning');
+            return;
+          }
           const productName = this.querySelector('strong').textContent;
           const currentQty = getWarehouseProductQuantity(product, user.warehouseId);
 

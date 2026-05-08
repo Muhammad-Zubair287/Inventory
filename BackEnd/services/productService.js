@@ -94,9 +94,11 @@ class ProductService {
         sortOrder = 'desc',
         warehouseId = '',
         warehouse = '',
+        includeZeroStock = false,
       } = options;
 
       const selectedWarehouseId = warehouseId || warehouse;
+      const shouldIncludeZeroStock = String(includeZeroStock).toLowerCase() === 'true' || String(includeZeroStock) === '1';
 
       // Build query
       const query = {};
@@ -162,6 +164,10 @@ class ProductService {
         })
         .filter((productObj) => {
           if (!selectedWarehouseId) {
+            return true;
+          }
+
+          if (shouldIncludeZeroStock) {
             return true;
           }
 
