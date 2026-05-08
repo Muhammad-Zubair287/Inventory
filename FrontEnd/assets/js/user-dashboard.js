@@ -2,12 +2,12 @@
 // API_BASE_URL is set by config.js
 // getToken() is provided by navbar.js
 
-// Get user data from localStorage
-const getUserId = () => localStorage.getItem('userId');
-const getUserName = () => localStorage.getItem('userName');
-const getWarehouseId = () => localStorage.getItem('warehouseId');
-const getWarehouseName = () => localStorage.getItem('warehouseName');
-const getUserRole = () => localStorage.getItem('userRole');
+// Get user data from sessionStorage
+const getUserId = () => sessionStorage.getItem('userId');
+const getUserName = () => sessionStorage.getItem('userName');
+const getWarehouseId = () => sessionStorage.getItem('warehouseId');
+const getWarehouseName = () => sessionStorage.getItem('warehouseName');
+const getUserRole = () => sessionStorage.getItem('userRole');
 
 // Check authentication (user-specific)
 async function checkUserAuth() {
@@ -34,7 +34,7 @@ async function checkUserAuth() {
     
     if (!response.ok) {
       // Token invalid or expired
-      localStorage.clear();
+      sessionStorage.clear();
       window.location.href = 'user-login.html';
       return false;
     }
@@ -51,7 +51,7 @@ async function checkUserAuth() {
     // This includes: server down, server restart, connection refused, etc.
     console.error('Auth validation error:', error.message || error);
     console.log('🚪 Logging out and redirecting to login...');
-    localStorage.clear();
+    sessionStorage.clear();
     window.location.href = 'user-login.html';
     return false;
   }
@@ -64,8 +64,8 @@ async function checkUserAuth() {
 
   // Redirect managers with multiple warehouses if no warehouse is currently selected
   if (userRole === 'manager') {
-    const warehouseId = localStorage.getItem('warehouseId');
-    const managerWarehouses = localStorage.getItem('managerWarehouses');
+    const warehouseId = sessionStorage.getItem('warehouseId');
+    const managerWarehouses = sessionStorage.getItem('managerWarehouses');
     if (!warehouseId && managerWarehouses) {
       try {
         const whs = JSON.parse(managerWarehouses);
@@ -125,7 +125,7 @@ async function silentUserTokenCheck() {
         clearInterval(userHeartbeatInterval);
       }
       
-      localStorage.clear();
+      sessionStorage.clear();
       window.location.href = 'user-login.html';
     } else {
       console.log('✅ User heartbeat: Token still valid');
@@ -144,13 +144,13 @@ async function silentUserTokenCheck() {
         if (!retryResponse.ok) {
           console.error('🚨 User token invalid after server restart');
           if (userHeartbeatInterval) clearInterval(userHeartbeatInterval);
-          localStorage.clear();
+          sessionStorage.clear();
           window.location.href = 'user-login.html';
         }
       } catch (retryError) {
         console.error('🚨 Server unreachable - logging out user');
         if (userHeartbeatInterval) clearInterval(userHeartbeatInterval);
-        localStorage.clear();
+        sessionStorage.clear();
         window.location.href = 'user-login.html';
       }
     }, 2000);
@@ -166,9 +166,9 @@ const getHeaders = () => ({
 // Switch back to warehouse selection (managers with multiple warehouses)
 function switchWarehouse() {
   // Clear current warehouse selection so the select page doesn't skip itself
-  localStorage.removeItem('warehouseId');
-  localStorage.removeItem('warehouseName');
-  localStorage.removeItem('warehouseCode');
+  sessionStorage.removeItem('warehouseId');
+  sessionStorage.removeItem('warehouseName');
+  sessionStorage.removeItem('warehouseCode');
   window.location.href = '/pages/manager-warehouse-select.html';
 }
 
@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Show "Switch Warehouse" button for managers who have multiple warehouses
   const userRole = getUserRole();
-  const managerWarehouses = localStorage.getItem('managerWarehouses');
+  const managerWarehouses = sessionStorage.getItem('managerWarehouses');
   if (userRole === 'manager' && managerWarehouses) {
     try {
       const whs = JSON.parse(managerWarehouses);
@@ -254,7 +254,7 @@ async function loadDashboardStats() {
     if (!response.ok) {
       if (response.status === 401) {
         console.log('❌ [User Dashboard] Unauthorized - clearing storage');
-        localStorage.clear();
+        sessionStorage.clear();
         window.location.href = 'user-login.html';
         return;
       }
@@ -269,30 +269,30 @@ async function loadDashboardStats() {
     if (data.success && data.data) {
       console.log('✅ [User Dashboard] Updating dashboard with data:', data.data);
       
-      // Save user data to localStorage and update the DOM from the verified API response.
-      // The init code already set DOM from localStorage, but localStorage can be stale
-      // (e.g. from a previous session). Refreshing the DOM here ensures the correct
+      // Save user data to sessionStorage and update the DOM from the verified API response.
+      // The init code already set DOM from sessionStorage, but sessionStorage can still be stale
+      // (e.g. from an older tab state). Refreshing the DOM here ensures the correct
       // logged-in user's name is always shown in the navbar.
       if (data.data.user) {
-        console.log('💾 [User Dashboard] Saving user data to localStorage');
-        if (data.data.user._id) localStorage.setItem('userId', data.data.user._id);
-        localStorage.setItem('userName', data.data.user.name);
-        localStorage.setItem('userEmail', data.data.user.email);
-        localStorage.setItem('userRole', data.data.user.role);
+        console.log('💾 [User Dashboard] Saving user data to sessionStorage');
+        if (data.data.user._id) sessionStorage.setItem('userId', data.data.user._id);
+        sessionStorage.setItem('userName', data.data.user.name);
+        sessionStorage.setItem('userEmail', data.data.user.email);
+        sessionStorage.setItem('userRole', data.data.user.role);
         // Always refresh the navbar name from the API-verified data
         const userNameEl = document.getElementById('userName');
         if (userNameEl) userNameEl.textContent = data.data.user.name || getUserName() || 'User';
       }
       
       // Only update the warehouse display text — do NOT overwrite warehouseId/warehouseName
-      // in localStorage as that would clobber the warehouse the manager selected.
-      // If the user has no warehouse in localStorage yet (first login edge-case), save it.
+      // in sessionStorage as that would clobber the warehouse the manager selected.
+      // If the user has no warehouse in sessionStorage yet (first login edge-case), save it.
       if (data.data.warehouse) {
-        if (!localStorage.getItem('warehouseId')) {
-          console.log('💾 [User Dashboard] No warehouse in localStorage, saving from API response');
-          localStorage.setItem('warehouseId', data.data.warehouse._id);
-          localStorage.setItem('warehouseName', data.data.warehouse.name);
-          localStorage.setItem('warehouseCode', data.data.warehouse.code || '');
+        if (!sessionStorage.getItem('warehouseId')) {
+          console.log('💾 [User Dashboard] No warehouse in sessionStorage, saving from API response');
+          sessionStorage.setItem('warehouseId', data.data.warehouse._id);
+          sessionStorage.setItem('warehouseName', data.data.warehouse.name);
+          sessionStorage.setItem('warehouseCode', data.data.warehouse.code || '');
         }
         // Always keep the DOM in sync with the warehouse the stats were fetched for
         const whNameEl = document.getElementById('warehouseName');
@@ -417,7 +417,7 @@ function viewWarehouseProducts() {
 // Logout function
 function handleLogout() {
   if (confirm('Are you sure you want to logout?')) {
-    localStorage.clear();
+    sessionStorage.clear();
     window.location.href = 'user-login.html';
   }
 }

@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadWarehouses() {
     try {
         console.log('🏢 [Warehouse List] Starting to load warehouses...');
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         if (!token) {
             console.log('❌ [Warehouse List] No token found, redirecting to login');
             window.location.href = 'login.html';
@@ -50,7 +50,7 @@ async function loadWarehouses() {
 
         if (response.status === 401) {
             console.log('❌ [Warehouse List] Unauthorized, redirecting to login');
-            localStorage.removeItem('token');
+            sessionStorage.removeItem('token');
             window.location.href = 'login.html';
             return;
         }

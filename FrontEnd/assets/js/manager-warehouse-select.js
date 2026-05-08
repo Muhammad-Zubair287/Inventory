@@ -7,7 +7,7 @@
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getToken() {
-  return localStorage.getItem('token');
+  return sessionStorage.getItem('token');
 }
 
 function getHeaders() {
@@ -18,7 +18,8 @@ function getHeaders() {
 }
 
 function handleLogout() {
-  localStorage.clear();
+  // Clear per-tab session storage
+  sessionStorage.clear();
   window.location.href = '/pages/login.html';
 }
 
@@ -121,9 +122,9 @@ function selectWarehouse(wh) {
   const name = wh.name  || '';
   const code = wh.code  || '';
 
-  localStorage.setItem('warehouseId',   id);
-  localStorage.setItem('warehouseName', name);
-  localStorage.setItem('warehouseCode', code);
+  sessionStorage.setItem('warehouseId',   id);
+  sessionStorage.setItem('warehouseName', name);
+  sessionStorage.setItem('warehouseCode', code);
 
   // Navigate into the warehouse dashboard
   window.location.href = '/pages/user-dashboard.html';
@@ -135,7 +136,7 @@ async function loadWarehouses() {
   showState('loading');
 
   // Try localStorage first (populated at login time)
-  const cached = localStorage.getItem('managerWarehouses');
+  const cached = sessionStorage.getItem('managerWarehouses');
   if (cached) {
     try {
       const warehouses = JSON.parse(cached);
@@ -170,7 +171,7 @@ async function fetchWarehouseDetails(ids) {
       showState('empty');
     } else {
       // Cache enriched data
-      localStorage.setItem('managerWarehouses', JSON.stringify(valid));
+      sessionStorage.setItem('managerWarehouses', JSON.stringify(valid));
       renderWarehouses(valid);
     }
   } catch (err) {
@@ -203,7 +204,7 @@ async function fetchAllManagerWarehouses() {
       return;
     }
 
-    localStorage.setItem('managerWarehouses', JSON.stringify(warehouses));
+    sessionStorage.setItem('managerWarehouses', JSON.stringify(warehouses));
     renderWarehouses(warehouses);
   } catch (err) {
     console.error('[WarehouseSelect] fetchAllManagerWarehouses error:', err);
@@ -221,7 +222,7 @@ async function checkAuth() {
     return false;
   }
 
-  const userRole = localStorage.getItem('userRole');
+  const userRole = sessionStorage.getItem('userRole');
   if (userRole === 'admin') {
     window.location.href = '/pages/admin.html';
     return false;
@@ -233,7 +234,7 @@ async function checkAuth() {
       headers: getHeaders()
     });
     if (!res.ok) {
-      localStorage.clear();
+      sessionStorage.clear();
       window.location.href = '/pages/login.html';
       return false;
     }
@@ -251,7 +252,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!ok) return;
 
   // Display manager name
-  const name = localStorage.getItem('userName') || 'Manager';
+  const name = sessionStorage.getItem('userName') || 'Manager';
   document.getElementById('managerName').textContent = name;
   document.getElementById('managerNameHeader').textContent = name;
 

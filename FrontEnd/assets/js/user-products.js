@@ -2,12 +2,12 @@
 // API_BASE_URL is set by config.js
 // getToken() is provided by navbar.js
 
-// Get user data from local storage
+// Get user data from session storage
 function getUser() {
-  const userRole = localStorage.getItem('userRole');
-  const userName = localStorage.getItem('userName');
-  const warehouseId = localStorage.getItem('warehouseId');
-  const warehouseName = localStorage.getItem('warehouseName');
+  const userRole = sessionStorage.getItem('userRole');
+  const userName = sessionStorage.getItem('userName');
+  const warehouseId = sessionStorage.getItem('warehouseId');
+  const warehouseName = sessionStorage.getItem('warehouseName');
   
   if (userRole && userName) {
     return { role: userRole, name: userName, warehouseId, warehouseName };
@@ -47,7 +47,7 @@ async function checkProductsAuth() {
     
     if (!response.ok) {
       // Token invalid or expired
-      localStorage.clear();
+      sessionStorage.clear();
       window.location.href = 'user-login.html';
       return false;
     }
@@ -60,7 +60,7 @@ async function checkProductsAuth() {
     
     // For all other errors, log out
     console.error('Auth validation error:', error);
-    localStorage.clear();
+    sessionStorage.clear();
     window.location.href = 'user-login.html';
     return false;
   }
@@ -76,7 +76,7 @@ async function checkProductsAuth() {
 
 // Logout handler
 function handleLogout() {
-  localStorage.clear();
+  sessionStorage.clear();
   window.location.href = 'user-login.html';
 }
 

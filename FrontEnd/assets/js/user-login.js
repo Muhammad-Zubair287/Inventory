@@ -5,8 +5,8 @@
 // sessionActive is stored in sessionStorage so it clears on browser close,
 // preventing auto-login from a stale localStorage token.
 document.addEventListener('DOMContentLoaded', () => {
-  const token = localStorage.getItem('token');
-  const userRole = localStorage.getItem('userRole');
+  const token = sessionStorage.getItem('token');
+  const userRole = sessionStorage.getItem('userRole');
   const sessionActive = sessionStorage.getItem('sessionActive');
   
   if (token && userRole && sessionActive && userRole !== 'admin') {
@@ -70,19 +70,17 @@ document.getElementById('userLoginForm').addEventListener('submit', async (e) =>
       return;
     }
 
-    console.log('💾 [Login] Saving to localStorage...');
-    // Store user data in localStorage
-    localStorage.setItem('token', token);
-    // Mark as active session — sessionStorage is cleared on browser close,
-    // so stale localStorage tokens cannot auto-login on next browser open.
+    console.log('💾 [Login] Saving to sessionStorage...');
+    // Store user data in sessionStorage (per-tab session)
+    sessionStorage.setItem('token', token);
     sessionStorage.setItem('sessionActive', 'true');
-    localStorage.setItem('userId', user._id);
-    localStorage.setItem('userName', user.name);
-    localStorage.setItem('userEmail', user.email);
-    localStorage.setItem('userRole', user.role);
-    localStorage.setItem('warehouseId', user.warehouse._id);
-    localStorage.setItem('warehouseName', user.warehouse.name);
-    localStorage.setItem('warehouseCode', user.warehouse.code);
+    sessionStorage.setItem('userId', user._id);
+    sessionStorage.setItem('userName', user.name);
+    sessionStorage.setItem('userEmail', user.email);
+    sessionStorage.setItem('userRole', user.role);
+    sessionStorage.setItem('warehouseId', user.warehouse._id);
+    sessionStorage.setItem('warehouseName', user.warehouse.name);
+    sessionStorage.setItem('warehouseCode', user.warehouse.code);
     
     console.log('✅ [Login] Data saved to localStorage:', {
       token: 'saved',

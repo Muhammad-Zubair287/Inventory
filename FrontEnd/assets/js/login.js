@@ -177,16 +177,15 @@ async function handleLogin(event) {
       throw new Error(`Your account is ${user.status}. Please contact administrator.`);
     }
 
-    // Store token and core user data in localStorage
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    // Mark as active session — stored in sessionStorage so it is cleared when the browser closes.
-    // admin-auth.js checks this marker to prevent auto-login from a stale localStorage token.
+    // Store token and core user data in sessionStorage (per-tab)
+    sessionStorage.setItem('token', token);
+    sessionStorage.setItem('user', JSON.stringify(user));
+    // Mark as active session — stored in sessionStorage so it is cleared when the tab closes.
     sessionStorage.setItem('sessionActive', 'true');
-    localStorage.setItem('userId', user._id);
-    localStorage.setItem('userName', user.name);
-    localStorage.setItem('userEmail', user.email);
-    localStorage.setItem('userRole', user.role);
+    sessionStorage.setItem('userId', user._id);
+    sessionStorage.setItem('userName', user.name);
+    sessionStorage.setItem('userEmail', user.email);
+    sessionStorage.setItem('userRole', user.role);
 
     // Show success message
     showAlert('Login successful! Redirecting...', 'success');
@@ -250,15 +249,15 @@ loginForm.addEventListener('submit', handleLogin);
 // sessionActive is stored in sessionStorage so it clears on browser close,
 // preventing auto-login from a stale localStorage token.
 window.addEventListener('DOMContentLoaded', () => {
-  const token = localStorage.getItem('token');
-  const userRole = localStorage.getItem('userRole');
+  const token = sessionStorage.getItem('token');
+  const userRole = sessionStorage.getItem('userRole');
   const sessionActive = sessionStorage.getItem('sessionActive');
   
   if (token && userRole && sessionActive) {
     // Redirect to appropriate page based on role
     if (userRole === 'admin') {
       window.location.href = '/pages/admin.html';
-    } else if (userRole === 'manager' && localStorage.getItem('managerWarehouses') && !localStorage.getItem('warehouseId')) {
+    } else if (userRole === 'manager' && sessionStorage.getItem('managerWarehouses') && !sessionStorage.getItem('warehouseId')) {
       window.location.href = '/pages/manager-warehouse-select.html';
     } else {
       window.location.href = '/pages/user-dashboard.html';

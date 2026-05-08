@@ -262,11 +262,11 @@
       document.addEventListener('DOMContentLoaded', function() {
         console.log('Settings page loaded, checking user data...');
         
-        // Check if user data exists in localStorage
-        const userData = localStorage.getItem('user');
-        const token = localStorage.getItem('token');
-        
-        console.log('User data in localStorage:', userData);
+        // Check if user data exists in sessionStorage
+        const userData = sessionStorage.getItem('user');
+        const token = sessionStorage.getItem('token');
+
+        console.log('User data in sessionStorage:', userData);
         console.log('Token exists:', !!token);
         
         // Wait a bit for navbar.js to initialize, then update

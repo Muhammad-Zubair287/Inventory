@@ -6,7 +6,7 @@ console.log('📊 [Reports] Script loaded');
 // API Headers with token (using localStorage)
 const getReportHeaders = () => ({
   'Content-Type': 'application/json',
-  'Authorization': `Bearer ${localStorage.getItem('token')}`
+  'Authorization': `Bearer ${sessionStorage.getItem('token')}`
 });
 
 // Format price with currency (delegates to global formatPrice from currency.js)

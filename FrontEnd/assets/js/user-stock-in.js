@@ -3,13 +3,13 @@
 // getToken() is provided by navbar.js
 
 console.log('📦 [Stock-In] Page loaded');
-console.log('📦 [Stock-In] Initial localStorage check:', {
-  token: localStorage.getItem('token') ? 'EXISTS' : 'MISSING',
-  userRole: localStorage.getItem('userRole') || 'MISSING',
-  userName: localStorage.getItem('userName') || 'MISSING',
-  warehouseId: localStorage.getItem('warehouseId') || 'MISSING',
-  warehouseName: localStorage.getItem('warehouseName') || 'MISSING',
-  allKeys: Object.keys(localStorage)
+console.log('📦 [Stock-In] Initial sessionStorage check:', {
+  token: sessionStorage.getItem('token') ? 'EXISTS' : 'MISSING',
+  userRole: sessionStorage.getItem('userRole') || 'MISSING',
+  userName: sessionStorage.getItem('userName') || 'MISSING',
+  warehouseId: sessionStorage.getItem('warehouseId') || 'MISSING',
+  warehouseName: sessionStorage.getItem('warehouseName') || 'MISSING',
+  allKeys: Object.keys(sessionStorage)
 });
 
 // Store products data for searching
@@ -17,10 +17,10 @@ let productsData = [];
 
 // Get user data from local storage
 function getUser() {
-  const userRole = localStorage.getItem('userRole');
-  const userName = localStorage.getItem('userName');
-  const warehouseId = localStorage.getItem('warehouseId');
-  const warehouseName = localStorage.getItem('warehouseName');
+  const userRole = sessionStorage.getItem('userRole');
+  const userName = sessionStorage.getItem('userName');
+  const warehouseId = sessionStorage.getItem('warehouseId');
+  const warehouseName = sessionStorage.getItem('warehouseName');
   
   if (userRole && userName) {
     return { role: userRole, name: userName, warehouseId, warehouseName };
@@ -55,16 +55,16 @@ async function checkStockInAuth() {
   console.log('🔐 [Stock-In] getToken exists?', typeof getToken);
   
   const user = getUser();
-  const token = window.getToken ? window.getToken() : localStorage.getItem('token');
+  const token = window.getToken ? window.getToken() : sessionStorage.getItem('token');
   
   console.log('🔐 [Stock-In] User:', user);
   console.log('🔐 [Stock-In] Token:', token ? 'Present (' + token.substring(0, 20) + '...)' : 'Missing');
   console.log('🔐 [Stock-In] API URL:', window.API_BASE_URL);
-  console.log('🔐 [Stock-In] localStorage contents:', {
-    token: localStorage.getItem('token') ? 'exists' : 'missing',
-    userRole: localStorage.getItem('userRole'),
-    userName: localStorage.getItem('userName'),
-    warehouseId: localStorage.getItem('warehouseId')
+    console.log('🔐 [Stock-In] sessionStorage contents:', {
+    token: sessionStorage.getItem('token') ? 'exists' : 'missing',
+    userRole: sessionStorage.getItem('userRole'),
+    userName: sessionStorage.getItem('userName'),
+    warehouseId: sessionStorage.getItem('warehouseId')
   });
   
   if (!user || !token) {
@@ -95,7 +95,7 @@ async function checkStockInAuth() {
       console.error('❌ [Stock-In] Token validation failed. Status:', response.status);
       const errorData = await response.json().catch(() => ({}));
       console.error('❌ [Stock-In] Error data:', errorData);
-      localStorage.clear();
+      sessionStorage.clear();
       window.location.href = 'user-login.html';
       return false;
     }
@@ -112,7 +112,7 @@ async function checkStockInAuth() {
     console.error('❌ [Stock-In] Auth validation error:', error);
     console.error('❌ [Stock-In] Error name:', error.name);
     console.error('❌ [Stock-In] Error message:', error.message);
-    localStorage.clear();
+    sessionStorage.clear();
     window.location.href = 'user-login.html';
     return false;
   }
@@ -126,8 +126,8 @@ async function checkStockInAuth() {
 
   // Redirect manager back to warehouse selection if no warehouse chosen
   if (user.role === 'manager') {
-    const warehouseId = localStorage.getItem('warehouseId');
-    const managerWarehouses = localStorage.getItem('managerWarehouses');
+    const warehouseId = sessionStorage.getItem('warehouseId');
+    const managerWarehouses = sessionStorage.getItem('managerWarehouses');
     if (!warehouseId && managerWarehouses) {
       try {
         const whs = JSON.parse(managerWarehouses);
@@ -153,16 +153,16 @@ async function checkStockInAuth() {
 }
 
 // Logout handler
-function handleLogout() {
-  localStorage.clear();
+  function handleLogout() {
+  sessionStorage.clear();
   window.location.href = 'user-login.html';
 }
 
 // Switch warehouse (managers only)
 function switchWarehouse() {
-  localStorage.removeItem('warehouseId');
-  localStorage.removeItem('warehouseName');
-  localStorage.removeItem('warehouseCode');
+  sessionStorage.removeItem('warehouseId');
+  sessionStorage.removeItem('warehouseName');
+  sessionStorage.removeItem('warehouseCode');
   window.location.href = 'manager-warehouse-select.html';
 }
 
@@ -326,7 +326,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Show "Switch Warehouse" button for managers with multiple warehouses
   if (user.role === 'manager') {
     try {
-      const whs = JSON.parse(localStorage.getItem('managerWarehouses') || '[]');
+      const whs = JSON.parse(sessionStorage.getItem('managerWarehouses') || '[]');
       if (whs.length > 1) {
         const switchBtn = document.getElementById('switchWarehouseNavItem');
         if (switchBtn) switchBtn.classList.remove('d-none');

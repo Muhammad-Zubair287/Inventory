@@ -207,9 +207,9 @@ async function handleSignup(event) {
       throw new Error(data.message || 'Registration failed');
     }
 
-    // Store token and user data
-    localStorage.setItem('token', data.data.token);
-    localStorage.setItem('user', JSON.stringify(data.data.user));
+    // Store token and user data in sessionStorage (per-tab session)
+    sessionStorage.setItem('token', data.data.token);
+    sessionStorage.setItem('user', JSON.stringify(data.data.user));
 
     // Show success message
     showAlert('Account created successfully! Redirecting...', 'success');

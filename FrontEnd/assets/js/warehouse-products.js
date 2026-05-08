@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Load warehouse details
 async function loadWarehouseDetails() {
     try {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         if (!token) {
             window.location.href = 'login.html';
             return;
@@ -51,7 +51,7 @@ async function loadWarehouseDetails() {
         });
 
         if (response.status === 401) {
-            localStorage.removeItem('token');
+            sessionStorage.removeItem('token');
             window.location.href = 'login.html';
             return;
         }
@@ -78,7 +78,7 @@ function displayWarehouseInfo(warehouse) {
 async function loadWarehouseProducts() {
     try {
         console.log('🔍 [Warehouse Products] Loading products for warehouse:', currentWarehouseId);
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         if (!token) {
             console.log('❌ [Warehouse Products] No token found');
             window.location.href = 'login.html';
@@ -99,7 +99,7 @@ async function loadWarehouseProducts() {
 
         if (response.status === 401) {
             console.log('❌ [Warehouse Products] Unauthorized');
-            localStorage.removeItem('token');
+            sessionStorage.removeItem('token');
             window.location.href = 'login.html';
             return;
         }

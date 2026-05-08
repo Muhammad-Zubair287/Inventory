@@ -233,7 +233,7 @@ async function loadWarehouses() {
           `<option value="${warehouse._id}">${warehouse.name} - ${warehouse.location?.city || ''}</option>`
         ).join('');
 
-      const savedWarehouseId = localStorage.getItem('warehouseId');
+      const savedWarehouseId = sessionStorage.getItem('warehouseId');
       if (savedWarehouseId && [...warehouseSelect.options].some(option => option.value === savedWarehouseId)) {
         warehouseSelect.value = savedWarehouseId;
       } else if (data.data.warehouses.length === 1) {
@@ -442,7 +442,7 @@ async function handleLogout() {
   } catch (error) {
     console.error('Logout error:', error);
   } finally {
-    localStorage.clear();
+    sessionStorage.clear();
     window.location.href = 'login.html';
   }
 }

@@ -13,17 +13,16 @@ window.handleApiError = function(response, data) {
   // Check for session expired / unauthorized errors
   if (response.status === 401) {
     console.warn('Session expired or invalid. Logging out...');
-    localStorage.clear();
+    sessionStorage.clear();
     window.location.href = '/pages/login.html';
     return true; // Error was handled
   }
   return false; // Error not handled, let caller handle it
 };
 
-// Get user from localStorage
+// Get user from sessionStorage
 function getUser() {
-  // Try to get user object
-  const userStr = localStorage.getItem('user');
+  const userStr = sessionStorage.getItem('user');
   if (userStr) {
     try {
       return JSON.parse(userStr);
@@ -31,13 +30,12 @@ function getUser() {
       console.error('Error parsing user data:', e);
     }
   }
-  
   return null;
 }
 
-// Get token from localStorage (exposed globally for other scripts)
+// Get token from sessionStorage (exposed globally for other scripts)
 function getToken() {
-  return localStorage.getItem('token');
+  return sessionStorage.getItem('token');
 }
 window.getToken = getToken; // Make globally accessible
 
@@ -92,11 +90,11 @@ function updateAdminName() {
 // Handle logout
 function handleLogout() {
   // Get user role to determine which login page to redirect to
-  const userRole = localStorage.getItem('userRole');
-  
-  // Clear all localStorage
-  localStorage.clear();
-  
+  const userRole = sessionStorage.getItem('userRole');
+
+  // Clear per-tab session storage
+  sessionStorage.clear();
+
   // Redirect to appropriate login page
   if (userRole === 'admin') {
     window.location.href = 'login.html';
@@ -108,7 +106,7 @@ function handleLogout() {
 // Check authentication
 async function checkAuth() {
   const token = getToken();
-  const userRole = localStorage.getItem('userRole');
+  const userRole = sessionStorage.getItem('userRole');
   console.log('🔐 [navbar.js] Checking authentication...');
   console.log('🔐 [navbar.js] User role:', userRole);
   
@@ -144,7 +142,7 @@ async function checkAuth() {
     if (!response.ok) {
       // Token invalid or expired (401, 403, etc.)
       console.error('❌ [navbar.js] Token validation failed. Logging out...');
-      localStorage.clear();
+      sessionStorage.clear();
       // Redirect based on user role
       if (userRole === 'admin') {
         window.location.href = 'login.html';
@@ -169,7 +167,7 @@ async function checkAuth() {
     // This includes: server down, server restart, connection refused, etc.
     console.error('❌ [navbar.js] Auth validation error:', error.message || error);
     console.log('🚪 [navbar.js] Logging out and redirecting to login...');
-    localStorage.clear();
+    sessionStorage.clear();
     // Redirect based on user role
     if (userRole === 'admin') {
       window.location.href = 'login.html';
@@ -231,9 +229,9 @@ async function silentTokenCheck() {
       if (heartbeatInterval) {
         clearInterval(heartbeatInterval);
       }
-      
+
       // Clear session and redirect
-      localStorage.clear();
+      sessionStorage.clear();
       window.location.href = '/pages/login.html';
     } else {
       console.log('✅ Heartbeat: Token still valid');
@@ -257,13 +255,13 @@ async function silentTokenCheck() {
         if (!retryResponse.ok) {
           console.error('🚨 Token invalid after server restart');
           if (heartbeatInterval) clearInterval(heartbeatInterval);
-          localStorage.clear();
+          sessionStorage.clear();
           window.location.href = '/pages/login.html';
         }
       } catch (retryError) {
         console.error('🚨 Server unreachable - logging out');
         if (heartbeatInterval) clearInterval(heartbeatInterval);
-        localStorage.clear();
+        sessionStorage.clear();
         window.location.href = '/pages/login.html';
       }
     }, 2000);

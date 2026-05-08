@@ -5,12 +5,12 @@
 // Store products for searching
 let productsData = [];
 
-// Get user data from local storage
+// Get user data from session storage
 function getUser() {
-  const userRole = localStorage.getItem('userRole');
-  const userName = localStorage.getItem('userName');
-  const warehouseId = localStorage.getItem('warehouseId');
-  const warehouseName = localStorage.getItem('warehouseName');
+  const userRole = sessionStorage.getItem('userRole');
+  const userName = sessionStorage.getItem('userName');
+  const warehouseId = sessionStorage.getItem('warehouseId');
+  const warehouseName = sessionStorage.getItem('warehouseName');
   
   if (userRole && userName) {
     return { role: userRole, name: userName, warehouseId, warehouseName };
@@ -50,7 +50,7 @@ async function checkStockOutAuth() {
     
     if (!response.ok) {
       // Token invalid or expired
-      localStorage.clear();
+      sessionStorage.clear();
       window.location.href = 'user-login.html';
       return false;
     }
@@ -63,7 +63,7 @@ async function checkStockOutAuth() {
     
     // For all other errors, log out
     console.error('Auth validation error:', error);
-    localStorage.clear();
+    sessionStorage.clear();
     window.location.href = 'user-login.html';
     return false;
   }
@@ -76,8 +76,8 @@ async function checkStockOutAuth() {
 
   // Redirect manager back to warehouse selection if no warehouse chosen
   if (user.role === 'manager') {
-    const warehouseId = localStorage.getItem('warehouseId');
-    const managerWarehouses = localStorage.getItem('managerWarehouses');
+    const warehouseId = sessionStorage.getItem('warehouseId');
+    const managerWarehouses = sessionStorage.getItem('managerWarehouses');
     if (!warehouseId && managerWarehouses) {
       try {
         const whs = JSON.parse(managerWarehouses);
@@ -103,15 +103,15 @@ async function checkStockOutAuth() {
 
 // Logout handler
 function handleLogout() {
-  localStorage.clear();
+  sessionStorage.clear();
   window.location.href = 'user-login.html';
 }
 
 // Switch warehouse (managers only)
 function switchWarehouse() {
-  localStorage.removeItem('warehouseId');
-  localStorage.removeItem('warehouseName');
-  localStorage.removeItem('warehouseCode');
+  sessionStorage.removeItem('warehouseId');
+  sessionStorage.removeItem('warehouseName');
+  sessionStorage.removeItem('warehouseCode');
   window.location.href = 'manager-warehouse-select.html';
 }
 
@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Show "Switch Warehouse" button for managers with multiple warehouses
   if (user.role === 'manager') {
     try {
-      const whs = JSON.parse(localStorage.getItem('managerWarehouses') || '[]');
+      const whs = JSON.parse(sessionStorage.getItem('managerWarehouses') || '[]');
       if (whs.length > 1) {
         const switchBtn = document.getElementById('switchWarehouseNavItem');
         if (switchBtn) switchBtn.classList.remove('d-none');

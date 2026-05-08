@@ -10,11 +10,11 @@ window.API_BASE_URL = window.API_BASE_URL || 'http://localhost:3001/api';
 const UPLOAD_BASE_URL = window.API_BASE_URL ? window.API_BASE_URL.replace('/api', '') : 'http://localhost:3001';
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Check authentication - use localStorage (consistent with admin-auth.js)
-    const token = localStorage.getItem('token');
+    // Check authentication - use sessionStorage (per-tab session)
+    const token = sessionStorage.getItem('token');
     if (!token) {
-        window.location.href = '../login.html';
-        return;
+      window.location.href = '../login.html';
+      return;
     }
 
     // Load user data
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     profileForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         const formData = new FormData();
         formData.append('name', document.getElementById('profile-name').value);
         
@@ -64,9 +64,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 showToast('Profile updated successfully!', 'success');
-                // Update local storage
+                // Update session storage
                 const user = data.data?.user || data.user || data.data;
-                localStorage.setItem('user', JSON.stringify(user));
+                sessionStorage.setItem('user', JSON.stringify(user));
                 
                 // Update UI elements immediately
                 updateProfileDisplay(user);
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     passwordForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         const currentPassword = passwordForm.querySelector('[name="currentPassword"]').value;
         const newPassword = document.getElementById('newPassword').value;
         const confirmPassword = document.getElementById('confirmPassword').value;
@@ -171,8 +171,8 @@ function updateProfileDisplay(user) {
   const role = user.role || 'Administrator';
   const profileImage = user.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
 
-  // Update localStorage
-  localStorage.setItem('user', JSON.stringify(user));
+  // Update sessionStorage
+  sessionStorage.setItem('user', JSON.stringify(user));
 
   // Update all name displays
   document.querySelectorAll('.user-display-name, .admin-name').forEach(el => {
@@ -216,8 +216,8 @@ async function loadUserProfile() {
   console.log('API_BASE_URL:', window.API_BASE_URL);
   
   try {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
+    const token = sessionStorage.getItem('token');
+    const userData = sessionStorage.getItem('user');
     
     if (!token) {
       console.error('No token found');
@@ -277,8 +277,8 @@ async function loadUserProfile() {
           // Handle different response formats
           const user = data.user || data.data || data;
 
-          // Save to localStorage for future use
-          localStorage.setItem('user', JSON.stringify(user));
+          // Save to sessionStorage for future use
+          sessionStorage.setItem('user', JSON.stringify(user));
 
           const nameInput = document.getElementById('profile-name');
           const emailInput = document.getElementById('profile-email');
@@ -318,7 +318,7 @@ document.getElementById('profile-form')?.addEventListener('submit', async (e) =>
   submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Saving...';
 
   try {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     const name = document.getElementById('profile-name').value.trim();
     
     if (!name) {
@@ -353,9 +353,9 @@ document.getElementById('profile-form')?.addEventListener('submit', async (e) =>
           console.log('Update response:', result);
           
           // Update localStorage
-          const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+          const storedUser = JSON.parse(sessionStorage.getItem('user') || '{}');
           storedUser.name = name;
-          localStorage.setItem('user', JSON.stringify(storedUser));
+          sessionStorage.setItem('user', JSON.stringify(storedUser));
           
           showToast('Your name has been updated successfully!', 'success');
           await loadUserProfile();
@@ -404,7 +404,7 @@ document.getElementById('password-form')?.addEventListener('submit', async (e) =
   submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Updating...';
 
   try {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
 
     const passwordData = {
       currentPassword: document.getElementById('currentPassword').value,
@@ -493,7 +493,7 @@ document.getElementById('profileImage')?.addEventListener('change', async functi
   reader.readAsDataURL(file);
 
   try {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     const formData = new FormData();
     formData.append('profileImage', file);
 
