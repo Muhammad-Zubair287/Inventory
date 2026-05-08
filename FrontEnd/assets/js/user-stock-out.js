@@ -131,7 +131,17 @@ function showAlert(message, type = 'info') {
 // Load products into productsData array
 async function loadProducts() {
   try {
-    const response = await fetch(`${window.API_BASE_URL}/products?limit=1000`, {
+    const user = getUser();
+    if (!user || !user.warehouseId) {
+      throw new Error('No warehouse selected for this user');
+    }
+
+    const query = new URLSearchParams({
+      limit: '1000',
+      warehouseId: user.warehouseId
+    });
+
+    const response = await fetch(`${window.API_BASE_URL}/products?${query.toString()}`, {
       headers: getHeaders()
     });
 
@@ -141,10 +151,15 @@ async function loadProducts() {
     const productSearch = document.getElementById('productSearch');
 
     if (data.data && data.data.products && Array.isArray(data.data.products)) {
-      productsData = data.data.products;
+      productsData = data.data.products.filter(product => Number(product.warehouseQuantity || 0) > 0);
       if (productSearch) {
-        productSearch.placeholder = `Click or type to search ${productsData.length} products...`;
-        productSearch.disabled = false;
+        if (productsData.length > 0) {
+          productSearch.placeholder = `Click or type to search ${productsData.length} products...`;
+          productSearch.disabled = false;
+        } else {
+          productSearch.placeholder = 'No products in this warehouse';
+          productSearch.disabled = true;
+        }
       }
     } else {
       productsData = [];
@@ -242,7 +257,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     productDropdown.style.display = 'none';
 
     const warehouseStock = product.warehouseStock?.find(s => s.warehouse.toString() === user.warehouseId);
-    const currentQty = warehouseStock?.quantity || 0;
+    const currentQty = warehouseStock?.quantity ?? product.warehouseQuantity ?? 0;
 
     document.getElementById('currentStockInfo').innerHTML = `
       <p><strong>Product:</strong> ${product.name}</p>
@@ -283,7 +298,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     productDropdown.innerHTML = filteredProducts.map(product => {
       const ws = product.warehouseStock?.find(s => s.warehouse.toString() === user.warehouseId);
-      const qty = ws?.quantity || 0;
+      const qty = ws?.quantity ?? product.warehouseQuantity ?? 0;
       return `
         <button type="button" class="list-group-item list-group-item-action" data-id="${product._id}" data-product='${JSON.stringify(product)}'>
           <div class="d-flex justify-content-between">
