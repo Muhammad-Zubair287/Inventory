@@ -12,6 +12,61 @@ const getHeaders = () => ({
 // DOM Elements
 let stockOutForm;
 let recentTransactionsBody;
+let warehouseChangeHandlerBound = false;
+
+function resetProductSelect(message = 'Choose a warehouse first') {
+  const productSelect = document.getElementById('productSelect');
+  const currentStockDisplay = document.getElementById('currentStock');
+  const quantityInput = document.getElementById('quantityInput');
+
+  if (productSelect) {
+    productSelect.innerHTML = `<option value="">${message}</option>`;
+    productSelect.disabled = true;
+  }
+
+  if (currentStockDisplay) {
+    currentStockDisplay.textContent = '0';
+  }
+
+  if (quantityInput) {
+    quantityInput.removeAttribute('max');
+  }
+}
+
+function getSelectedWarehouseId() {
+  const warehouseSelect = document.getElementById('warehouseSelect');
+  return warehouseSelect ? warehouseSelect.value : '';
+}
+
+function bindWarehouseChangeHandler() {
+  const warehouseSelect = document.getElementById('warehouseSelect');
+
+  if (!warehouseSelect || warehouseChangeHandlerBound) {
+    return;
+  }
+
+  warehouseSelect.addEventListener('change', () => {
+    const productSelect = document.getElementById('productSelect');
+    if (productSelect) {
+      productSelect.value = '';
+    }
+
+    const quantityInput = document.getElementById('quantityInput');
+    if (quantityInput) {
+      quantityInput.value = 1;
+      quantityInput.removeAttribute('max');
+    }
+
+    const currentStockDisplay = document.getElementById('currentStock');
+    if (currentStockDisplay) {
+      currentStockDisplay.textContent = '0';
+    }
+
+    loadProducts();
+  });
+
+  warehouseChangeHandlerBound = true;
+}
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
@@ -23,9 +78,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   recentTransactionsBody = document.getElementById('recentTransactionsBody');
 
   // Load initial data
-  loadProducts();
   loadWarehouses();
   loadRecentTransactions();
+  bindWarehouseChangeHandler();
+  resetProductSelect();
 
   // Event listeners
   if (stockOutForm) {
@@ -48,8 +104,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadProducts() {
   try {
     console.log('📦 [Stock-Out] Loading products...');
-    // Remove status filter to load ALL products
-    const response = await fetch(`${window.API_BASE_URL}/products?limit=1000`, {
+    const warehouseId = getSelectedWarehouseId();
+
+    if (!warehouseId) {
+      console.warn('⚠️ [Stock-Out] Warehouse must be selected before loading products');
+      resetProductSelect('Choose a warehouse first');
+      return;
+    }
+
+    const query = new URLSearchParams({
+      limit: '1000',
+      warehouseId,
+    });
+
+    const response = await fetch(`${window.API_BASE_URL}/products?${query.toString()}`, {
       headers: getHeaders()
     });
 
@@ -71,16 +139,31 @@ async function loadProducts() {
     console.log('📦 [Stock-Out] Product select element:', productSelect ? 'Found' : 'NOT FOUND');
     
     if (productSelect && data.data && data.data.products) {
-      const products = data.data.products;
-      console.log(`📦 [Stock-Out] Found ${products.length} products`);
-      
+      const products = data.data.products.filter(product => Number(product.warehouseQuantity || 0) > 0);
+      console.log(`📦 [Stock-Out] Found ${products.length} warehouse products`);
+
+      if (products.length === 0) {
+        productSelect.innerHTML = '<option value="">No products in selected warehouse</option>';
+        productSelect.disabled = true;
+        console.warn('⚠️ [Stock-Out] No in-stock products found for the selected warehouse');
+        return;
+      }
+
+      productSelect.disabled = false;
+
+      if (typeof $ !== 'undefined' && $.fn.select2 && $(productSelect).hasClass('select2-hidden-accessible')) {
+        $(productSelect).off('select2:select');
+        $(productSelect).select2('destroy');
+      }
+
       productSelect.innerHTML = '<option value="">Select Product</option>' +
         products.map(product => {
-          const stockInfo = product.quantity > 0 ? `Stock: ${product.quantity}` : 'Out of Stock';
-          return `<option value="${product._id}" data-stock="${product.quantity}" data-price="${product.unitPrice || 0}">${product.name} (SKU: ${product.sku}) - ${stockInfo}</option>`;
+          const stockQty = Number(product.warehouseQuantity || 0);
+          const stockInfo = `Stock: ${stockQty}`;
+          return `<option value="${product._id}" data-stock="${stockQty}" data-price="${product.unitPrice || 0}">${product.name} (SKU: ${product.sku}) - ${stockInfo}</option>`;
         }).join('');
       
-      console.log(`✅ [Stock-Out] Added ${products.length} products to dropdown`);
+      console.log(`✅ [Stock-Out] Added ${products.length} warehouse products to dropdown`);
       
       // Initialize Select2 for searchable dropdown
       if (typeof $ !== 'undefined' && $.fn.select2) {
@@ -123,6 +206,7 @@ async function loadProducts() {
     }
   } catch (error) {
     console.error('❌ [Stock-Out] Error loading products:', error);
+    resetProductSelect('Failed to load products');
   }
 }
 
@@ -148,9 +232,23 @@ async function loadWarehouses() {
         data.data.warehouses.map(warehouse => 
           `<option value="${warehouse._id}">${warehouse.name} - ${warehouse.location?.city || ''}</option>`
         ).join('');
+
+      const savedWarehouseId = localStorage.getItem('warehouseId');
+      if (savedWarehouseId && [...warehouseSelect.options].some(option => option.value === savedWarehouseId)) {
+        warehouseSelect.value = savedWarehouseId;
+      } else if (data.data.warehouses.length === 1) {
+        warehouseSelect.value = data.data.warehouses[0]._id;
+      }
+
+      if (warehouseSelect.value) {
+        loadProducts();
+      } else {
+        resetProductSelect();
+      }
     }
   } catch (error) {
     console.error('Error loading warehouses:', error);
+    resetProductSelect('Failed to load warehouses');
   }
 }
 
@@ -184,13 +282,25 @@ async function handleStockOut(e) {
 
   const formData = new FormData(stockOutForm);
   const productSelect = document.getElementById('productSelect');
+  const warehouseId = formData.get('warehouse');
+
+  if (!warehouseId) {
+    showAlert('Please select a warehouse first', 'warning');
+    return;
+  }
+
+  if (!productSelect || productSelect.selectedIndex < 0) {
+    showAlert('Please select a product', 'warning');
+    return;
+  }
+
   const selectedOption = productSelect.options[productSelect.selectedIndex];
   const currentStock = parseInt(selectedOption.getAttribute('data-stock') || '0');
   const requestedQuantity = parseInt(formData.get('quantity'));
 
   const transactionData = {
     product: formData.get('product'),
-    warehouse: formData.get('warehouse'),
+    warehouse: warehouseId,
     type: 'stock_out',
     quantity: requestedQuantity,
     unitPrice: parseFloat(formData.get('unitPrice')),

@@ -139,26 +139,34 @@ class ProductService {
         Product.countDocuments(query),
       ]);
 
-      const normalizedProducts = products.map((product) => {
-        const productObj = product.toObject();
+      const normalizedProducts = products
+        .map((product) => {
+          const productObj = product.toObject();
 
-        if (!selectedWarehouseId) {
+          if (!selectedWarehouseId) {
+            return {
+              ...productObj,
+              warehouseQuantity: productObj.quantity || 0,
+            };
+          }
+
+          const matchingWarehouseStock = (productObj.warehouseStock || []).find((stock) => {
+            const stockWarehouseId = stock?.warehouse?._id || stock?.warehouse;
+            return stockWarehouseId && String(stockWarehouseId) === String(selectedWarehouseId);
+          });
+
           return {
             ...productObj,
-            warehouseQuantity: productObj.quantity || 0,
+            warehouseQuantity: matchingWarehouseStock?.quantity || 0,
           };
-        }
+        })
+        .filter((productObj) => {
+          if (!selectedWarehouseId) {
+            return true;
+          }
 
-        const matchingWarehouseStock = (productObj.warehouseStock || []).find((stock) => {
-          const stockWarehouseId = stock?.warehouse?._id || stock?.warehouse;
-          return stockWarehouseId && String(stockWarehouseId) === String(selectedWarehouseId);
+          return Number(productObj.warehouseQuantity || 0) > 0;
         });
-
-        return {
-          ...productObj,
-          warehouseQuantity: matchingWarehouseStock?.quantity || 0,
-        };
-      });
 
       return {
         products: normalizedProducts,
