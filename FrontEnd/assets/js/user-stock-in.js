@@ -35,6 +35,19 @@ function getHeaders() {
   };
 }
 
+function getWarehouseProductQuantity(product, warehouseId) {
+  if (typeof product?.warehouseQuantity === 'number') {
+    return product.warehouseQuantity;
+  }
+
+  const warehouseStock = product?.warehouseStock?.find((stock) => {
+    const stockWarehouseId = stock?.warehouse?._id || stock?.warehouse;
+    return stockWarehouseId && String(stockWarehouseId) === String(warehouseId);
+  });
+
+  return warehouseStock?.quantity || 0;
+}
+
 // Check authentication (user-specific for stock-in)
 async function checkStockInAuth() {
   console.log('🔐 [Stock-In] Starting authentication check...');
@@ -170,7 +183,12 @@ function showAlert(message, type = 'info') {
 async function loadProducts() {
   try {
     const user = getUser();
-    const response = await fetch(`${window.API_BASE_URL}/products?limit=1000`, {
+    const params = new URLSearchParams({ limit: '1000' });
+    if (user?.warehouseId) {
+      params.append('warehouseId', user.warehouseId);
+    }
+
+    const response = await fetch(`${window.API_BASE_URL}/products?${params.toString()}`, {
       headers: getHeaders()
     });
 
@@ -357,7 +375,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <small class="text-muted">SKU: ${product.sku}</small>
             </div>
             <div class="text-end">
-              <span class="badge bg-primary">${product.quantity || 0} in stock</span>
+              <span class="badge bg-primary">${getWarehouseProductQuantity(product, user.warehouseId)} in stock</span>
             </div>
           </div>
         </button>
@@ -370,14 +388,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           const productId = this.getAttribute('data-id');
           const product = JSON.parse(this.getAttribute('data-product'));
           const productName = this.querySelector('strong').textContent;
+          const currentQty = getWarehouseProductQuantity(product, user.warehouseId);
 
           productInput.value = productId;
           productSearch.value = productName;
-          document.getElementById('currentStock').textContent = product.quantity || 0;
+          document.getElementById('currentStock').textContent = currentQty;
 
           const stockInfo = document.getElementById('currentStockInfo');
-          const warehouseStock = product.warehouseStock?.find(s => s.warehouse.toString() === user.warehouseId);
-          const currentQty = warehouseStock?.quantity || 0;
 
           stockInfo.innerHTML = `
             <p><strong>Product:</strong> ${product.name}</p>

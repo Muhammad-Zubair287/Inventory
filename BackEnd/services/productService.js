@@ -92,7 +92,11 @@ class ProductService {
         maxPrice = Number.MAX_SAFE_INTEGER,
         sortBy = 'createdAt',
         sortOrder = 'desc',
+        warehouseId = '',
+        warehouse = '',
       } = options;
+
+      const selectedWarehouseId = warehouseId || warehouse;
 
       // Build query
       const query = {};
@@ -135,8 +139,29 @@ class ProductService {
         Product.countDocuments(query),
       ]);
 
+      const normalizedProducts = products.map((product) => {
+        const productObj = product.toObject();
+
+        if (!selectedWarehouseId) {
+          return {
+            ...productObj,
+            warehouseQuantity: productObj.quantity || 0,
+          };
+        }
+
+        const matchingWarehouseStock = (productObj.warehouseStock || []).find((stock) => {
+          const stockWarehouseId = stock?.warehouse?._id || stock?.warehouse;
+          return stockWarehouseId && String(stockWarehouseId) === String(selectedWarehouseId);
+        });
+
+        return {
+          ...productObj,
+          warehouseQuantity: matchingWarehouseStock?.quantity || 0,
+        };
+      });
+
       return {
-        products,
+        products: normalizedProducts,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
