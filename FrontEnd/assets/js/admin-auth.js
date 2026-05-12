@@ -3,8 +3,10 @@
  * Protects admin pages and verifies user permissions
  */
 
-// Use API_BASE_URL from navbar.js or define it if not available
-window.API_BASE_URL = window.API_BASE_URL || 'http://localhost:3001/api';
+// Use centralized API base URL from config.js.
+window.API_BASE_URL =
+  window.API_BASE_URL ||
+  (window.resolveApiBaseUrl ? window.resolveApiBaseUrl() : `${window.location.origin}/api`);
 
 // Check authentication and authorization
 async function checkAdminAccess() {

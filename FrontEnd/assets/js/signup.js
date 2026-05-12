@@ -3,8 +3,10 @@
  * Handles form validation and submission for user registration
  */
 
-// API base URL
-const API_BASE_URL = window.API_BASE_URL || 'http://localhost:3001/api';
+// API base URL from centralized config.
+const API_BASE_URL =
+  window.API_BASE_URL ||
+  (window.resolveApiBaseUrl ? window.resolveApiBaseUrl() : `${window.location.origin}/api`);
 
 // Get form elements
 const signupForm = document.getElementById('signupForm');

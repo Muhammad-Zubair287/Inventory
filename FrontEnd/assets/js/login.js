@@ -3,9 +3,10 @@
  * Handles form validation and submission for user login
  */
 
-// Use API_BASE_URL from config.js or window object
-// Fallback to localhost for development
-window.API_BASE_URL = window.API_BASE_URL || 'http://localhost:3001/api';
+// Use centralized API base URL from config.js.
+window.API_BASE_URL =
+  window.API_BASE_URL ||
+  (window.resolveApiBaseUrl ? window.resolveApiBaseUrl() : `${window.location.origin}/api`);
 
 // Get form elements
 const loginForm = document.getElementById('loginForm');

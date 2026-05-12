@@ -3,7 +3,9 @@
  * Helper functions for authentication across the application
  */
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL =
+  window.API_BASE_URL ||
+  (window.resolveApiBaseUrl ? window.resolveApiBaseUrl() : `${window.location.origin}/api`);
 
 // Get stored token
 export function getToken() {

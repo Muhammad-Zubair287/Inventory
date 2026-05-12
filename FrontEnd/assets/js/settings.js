@@ -4,10 +4,14 @@
  */
 
 // Ensure API_BASE_URL is available on window object (don't redeclare as const)
-window.API_BASE_URL = window.API_BASE_URL || 'http://localhost:3001/api';
+window.API_BASE_URL =
+  window.API_BASE_URL ||
+  (window.resolveApiBaseUrl ? window.resolveApiBaseUrl() : `${window.location.origin}/api`);
 
-// Use window.API_BASE_URL throughout this file to avoid conflicts
-const UPLOAD_BASE_URL = window.API_BASE_URL ? window.API_BASE_URL.replace('/api', '') : 'http://localhost:3001';
+// Use centralized upload base URL and fallback to same-origin.
+const UPLOAD_BASE_URL =
+  window.UPLOAD_BASE_URL ||
+  (window.API_BASE_URL ? window.API_BASE_URL.replace('/api', '') : window.location.origin);
 
 document.addEventListener('DOMContentLoaded', () => {
     // Check authentication - use sessionStorage (per-tab session)
